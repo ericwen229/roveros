@@ -2,6 +2,7 @@ package com.ericwen229.server;
 
 import com.ericwen229.node.NodeManager;
 import com.ericwen229.node.RoverControllerNode;
+import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -12,14 +13,20 @@ import java.util.Scanner;
 
 public class ControlServer extends WebSocketServer {
 
+    // ========== members ==========
+
     private final RoverControllerNode controllerNode;
 
-    public ControlServer(InetSocketAddress address) {
+    // ========== constructor ==========
+
+    public ControlServer(@NonNull InetSocketAddress address) {
         super(address);
         System.out.println(String.format("[server starting on %s:%d]", address.getHostName(), address.getPort()));
 
         controllerNode = NodeManager.acquireRoverControllerNode();
     }
+
+    // ========== overridden methods ==========
 
     @Override
     public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
@@ -35,7 +42,7 @@ public class ControlServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket webSocket, String s) {
-        // TODO: protocal design
+        // TODO: protocol design
         Scanner scanner = new Scanner(s);
         double linear = scanner.nextDouble();
         double angular = scanner.nextDouble();
@@ -59,6 +66,15 @@ public class ControlServer extends WebSocketServer {
     public void onStart() {
         // TODO: server startup
         System.out.println("[server is up]");
+    }
+
+    // ========== util classes ==========
+
+    private static class ControlMsgPublisher {
+
+        private ControlMsgPublisher(@NonNull RoverControllerNode controllerNode) {
+        }
+
     }
     
 }
