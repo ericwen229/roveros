@@ -60,10 +60,5 @@ public class ControlServer extends WebSocketServer {
         // TODO: server startup
         System.out.println("[server is up]");
     }
-
-    public static void main(String[] args) {
-        // TODO: move to main application class
-        ControlServer controlServer = new ControlServer(new InetSocketAddress("localhost", 8886));
-        controlServer.run();
-    }
+    
 }
