@@ -27,7 +27,9 @@ public class RoverControllerNode implements NodeMain {
 
     public void onStart(ConnectedNode connectedNode) {
         // TODO: set topic name via config or central management
-        publisher = connectedNode.newPublisher("/cmd_vel", Twist._TYPE);
+        // turtlebot 2: /cmd_vel_mux/input/teleop
+        // turtlebot 3: /cmd_vel
+        publisher = connectedNode.newPublisher("/cmd_vel_mux/input/teleop", Twist._TYPE);
     }
 
     public void onShutdown(Node node) {

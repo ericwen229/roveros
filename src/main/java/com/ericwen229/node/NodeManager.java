@@ -11,14 +11,23 @@ public class NodeManager {
     private static final NodeConfiguration defaultNodeConfig = NodeConfiguration.newPrivate();
 
     private static RoverControllerNode controllerNode = null;
+    private static RoverVideoMonitorNode videoMonitorNode = null;
 
-    public static RoverControllerNode acquireRoverControllerNode() {
+    public static RoverControllerNode acquireControllerNode() {
         // TODO: may not be singleton in the future
         if (controllerNode == null) {
             controllerNode = new RoverControllerNode();
             defaultNodeExecutor.execute(controllerNode, defaultNodeConfig);
         }
         return controllerNode;
+    }
+
+    public static RoverVideoMonitorNode acquireVideoMonitorNode() {
+        if (videoMonitorNode == null) {
+            videoMonitorNode = new RoverVideoMonitorNode();
+            defaultNodeExecutor.execute(videoMonitorNode, defaultNodeConfig);
+        }
+        return videoMonitorNode;
     }
 
 }

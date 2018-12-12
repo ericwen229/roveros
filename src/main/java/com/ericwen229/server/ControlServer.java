@@ -1,7 +1,6 @@
 package com.ericwen229.server;
 
 import com.ericwen229.node.NodeManager;
-import com.ericwen229.node.RoverControllerNode;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -21,7 +20,7 @@ public class ControlServer extends WebSocketServer {
 
     public ControlServer(@NonNull InetSocketAddress address) {
         super(address);
-        System.out.println(String.format("[server starting on %s:%d]", address.getHostName(), address.getPort()));
+        System.out.println(String.format("[control server starting on %s:%d]", address.getHostName(), address.getPort()));
     }
 
     // ========== overridden methods ==========
@@ -29,13 +28,13 @@ public class ControlServer extends WebSocketServer {
     @Override
     public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
         // TODO: client connection handling
-        System.out.println("[a client just came]");
+        System.out.println("[a client just came to control server]");
     }
 
     @Override
     public void onClose(WebSocket webSocket, int i, String s, boolean b) {
         // TODO: client removal handling
-        System.out.println("[a client has left]");
+        System.out.println("[a client has left control server]");
     }
 
     @Override
@@ -52,13 +51,13 @@ public class ControlServer extends WebSocketServer {
     @Override
     public void onError(WebSocket webSocket, Exception e) {
         // TODO: error handling
-        System.out.println(String.format("[exception: %s]", e.toString()));
+        System.out.println(String.format("[control server exception: %s]", e.toString()));
     }
 
     @Override
     public void onStart() {
         // TODO: server startup
-        System.out.println("[server is up]");
+        System.out.println("[control server is up]");
     }
 
     // ========== util classes ==========
@@ -83,10 +82,10 @@ public class ControlServer extends WebSocketServer {
                         }
 
                         try {
-                            NodeManager.acquireRoverControllerNode().publish(linearValue, angularValue);
+                            NodeManager.acquireControllerNode().publish(linearValue, angularValue);
                         }
                         catch (RosRuntimeException e) {
-                            System.out.println("[publish failed]");
+                            System.out.println("[control message publish failed]");
                         }
 
                         try {

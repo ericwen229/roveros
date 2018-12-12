@@ -24,12 +24,12 @@
         </dependency>
         <dependency>
             <groupId>org.ros.rosjava_messages</groupId>
-            <artifactId>std_msgs</artifactId>
-            <version>0.5.11</version>
+            <artifactId>geometry_msgs</artifactId>
+            <version>1.12.6</version>
         </dependency>
         <dependency>
             <groupId>org.ros.rosjava_messages</groupId>
-            <artifactId>geometry_msgs</artifactId>
+            <artifactId>sensor_msgs</artifactId>
             <version>1.12.6</version>
         </dependency>
         <dependency>
@@ -61,6 +61,11 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>1.18.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
+            <version>3.2.0.Final</version>
         </dependency>
     </dependencies>
 
