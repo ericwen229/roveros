@@ -1,5 +1,6 @@
 package com.ericwen229.node;
 
+import com.ericwen229.util.pattern.Observer;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
@@ -41,15 +42,7 @@ public class RoverVideoMonitorNode implements NodeMain {
     public void onError(Node node, Throwable throwable) {
     }
 
-    // ========== image observer ==========
-
-    // TODO: move this to somewhere else
-
-    public static interface Observer<T> {
-
-        void notify(T imageMsg);
-
-    }
+    // ========== observer pattern ==========
 
     private void notifyObservers(Image imageMsg) {
         for (Observer<Image> o: observers) {

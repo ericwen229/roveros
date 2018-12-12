@@ -3,6 +3,7 @@ package com.ericwen229.server;
 import com.ericwen229.node.NodeManager;
 import com.ericwen229.node.RoverVideoMonitorNode;
 import com.ericwen229.util.ImageUtil;
+import com.ericwen229.util.pattern.Observer;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -16,7 +17,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Base64;
 
-public class VideoServer extends WebSocketServer implements RoverVideoMonitorNode.Observer<Image> {
+public class VideoServer extends WebSocketServer implements Observer<Image> {
 
     // ========== constructor ==========
 
