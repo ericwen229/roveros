@@ -10,53 +10,53 @@ import org.ros.node.topic.Publisher;
 
 public class RoverControllerNode implements NodeMain {
 
-    // ========== constants ==========
+	// ========== constants ==========
 
-    private static final double frequency = 10.0;
-    private static final long loopInterval = hzToMillisecondInterval(frequency);
+	private static final double frequency = 10.0;
+	private static final long loopInterval = hzToMillisecondInterval(frequency);
 
-    // ========== members ==========
+	// ========== members ==========
 
-    private Publisher<Twist> publisher = null;
+	private Publisher<Twist> publisher = null;
 
-    // ========== interface required methods ==========
+	// ========== interface required methods ==========
 
-    public GraphName getDefaultNodeName() {
-        return GraphName.of("controller");
-    }
+	public GraphName getDefaultNodeName() {
+		return GraphName.of("controller");
+	}
 
-    public void onStart(ConnectedNode connectedNode) {
-        // TODO: set topic name via config or central management
-        // turtlebot 2: /cmd_vel_mux/input/teleop
-        // turtlebot 3: /cmd_vel
-        publisher = connectedNode.newPublisher("/cmd_vel_mux/input/teleop", Twist._TYPE);
-    }
+	public void onStart(ConnectedNode connectedNode) {
+		// TODO: set topic name via config or central management
+		// turtlebot 2: /cmd_vel_mux/input/teleop
+		// turtlebot 3: /cmd_vel
+		publisher = connectedNode.newPublisher("/cmd_vel_mux/input/teleop", Twist._TYPE);
+	}
 
-    public void onShutdown(Node node) {
-    }
+	public void onShutdown(Node node) {
+	}
 
-    public void onShutdownComplete(Node node) {
-    }
+	public void onShutdownComplete(Node node) {
+	}
 
-    public void onError(Node node, Throwable throwable) {
-    }
+	public void onError(Node node, Throwable throwable) {
+	}
 
-    // ========== methods ==========
+	// ========== methods ==========
 
-    public void publish(double linear, double angular) {
-        if (publisher == null)
-            throw new RosRuntimeException("");
+	public void publish(double linear, double angular) {
+		if (publisher == null)
+			throw new RosRuntimeException("");
 
-        Twist msg = publisher.newMessage();
-        msg.getLinear().setX(linear);
-        msg.getAngular().setZ(angular);
-        publisher.publish(msg);
-    }
+		Twist msg = publisher.newMessage();
+		msg.getLinear().setX(linear);
+		msg.getAngular().setZ(angular);
+		publisher.publish(msg);
+	}
 
-    // ========== utils ==========
+	// ========== utils ==========
 
-    public static long hzToMillisecondInterval(double hz) {
-        return (long)(1000 / hz);
-    }
+	public static long hzToMillisecondInterval(double hz) {
+		return (long) (1000 / hz);
+	}
 
 }

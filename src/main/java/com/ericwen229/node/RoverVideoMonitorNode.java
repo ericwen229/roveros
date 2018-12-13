@@ -14,48 +14,48 @@ import java.util.List;
 
 public class RoverVideoMonitorNode implements NodeMain {
 
-    // ========== members ==========
+	// ========== members ==========
 
-    private Subscriber<Image> subscriber = null;
-    private final List<Observer<Image>> observers = Collections.synchronizedList(new ArrayList<>());
+	private Subscriber<Image> subscriber = null;
+	private final List<Observer<Image>> observers = Collections.synchronizedList(new ArrayList<>());
 
-    // ========== interface required methods ==========
+	// ========== interface required methods ==========
 
-    public GraphName getDefaultNodeName() {
-        return GraphName.of("videomonitor");
-    }
+	public GraphName getDefaultNodeName() {
+		return GraphName.of("videomonitor");
+	}
 
-    public void onStart(ConnectedNode connectedNode) {
-        // TODO: manage name
-        subscriber = connectedNode.newSubscriber("/camera/rgb/image_raw", Image._TYPE);
-        subscriber.addMessageListener(imageMsg -> {
-            notifyObservers(imageMsg);
-        });
-    }
+	public void onStart(ConnectedNode connectedNode) {
+		// TODO: manage name
+		subscriber = connectedNode.newSubscriber("/camera/rgb/image_raw", Image._TYPE);
+		subscriber.addMessageListener(imageMsg -> {
+			notifyObservers(imageMsg);
+		});
+	}
 
-    public void onShutdown(Node node) {
-    }
+	public void onShutdown(Node node) {
+	}
 
-    public void onShutdownComplete(Node node) {
-    }
+	public void onShutdownComplete(Node node) {
+	}
 
-    public void onError(Node node, Throwable throwable) {
-    }
+	public void onError(Node node, Throwable throwable) {
+	}
 
-    // ========== observer pattern ==========
+	// ========== observer pattern ==========
 
-    private void notifyObservers(Image imageMsg) {
-        for (Observer<Image> o: observers) {
-            o.notify(imageMsg);
-        }
-    }
+	private void notifyObservers(Image imageMsg) {
+		for (Observer<Image> o : observers) {
+			o.notify(imageMsg);
+		}
+	}
 
-    public void addObserver(Observer<Image> observer) {
-        observers.add(observer);
-    }
+	public void addObserver(Observer<Image> observer) {
+		observers.add(observer);
+	}
 
-    public void removeObserver(Observer<Image> observer) {
-        observers.remove(observer);
-    }
+	public void removeObserver(Observer<Image> observer) {
+		observers.remove(observer);
+	}
 
 }

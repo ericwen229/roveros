@@ -12,128 +12,126 @@ import java.util.Scanner;
 
 public class ControlServer extends WebSocketServer {
 
-    // ========== members ==========
+	// ========== members ==========
 
-    private final ControlMsgPublisher msgPublisher = new ControlMsgPublisher(100);
+	private final ControlMsgPublisher msgPublisher = new ControlMsgPublisher(100);
 
-    // ========== constructor ==========
+	// ========== constructor ==========
 
-    public ControlServer(@NonNull InetSocketAddress address) {
-        super(address);
-        System.out.println(String.format("[control server starting on %s:%d]", address.getHostName(), address.getPort()));
-    }
+	public ControlServer(@NonNull InetSocketAddress address) {
+		super(address);
+		System.out.println(String.format("[control server starting on %s:%d]", address.getHostName(), address.getPort()));
+	}
 
-    // ========== overridden methods ==========
+	// ========== overridden methods ==========
 
-    @Override
-    public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-        // TODO: client connection handling
-        System.out.println("[a client just came to control server]");
-    }
+	@Override
+	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
+		// TODO: client connection handling
+		System.out.println("[a client just came to control server]");
+	}
 
-    @Override
-    public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-        // TODO: client removal handling
-        System.out.println("[a client has left control server]");
-    }
+	@Override
+	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
+		// TODO: client removal handling
+		System.out.println("[a client has left control server]");
+	}
 
-    @Override
-    public void onMessage(WebSocket webSocket, String s) {
-        // TODO: protocol design
-        Scanner scanner = new Scanner(s);
-        double linear = scanner.nextDouble();
-        double angular = scanner.nextDouble();
+	@Override
+	public void onMessage(WebSocket webSocket, String s) {
+		// TODO: protocol design
+		Scanner scanner = new Scanner(s);
+		double linear = scanner.nextDouble();
+		double angular = scanner.nextDouble();
 
-        msgPublisher.setLinear(linear);
-        msgPublisher.setAngular(angular);
-    }
+		msgPublisher.setLinear(linear);
+		msgPublisher.setAngular(angular);
+	}
 
-    @Override
-    public void onError(WebSocket webSocket, Exception e) {
-        // TODO: error handling
-        System.out.println(String.format("[control server exception: %s]", e.toString()));
-    }
+	@Override
+	public void onError(WebSocket webSocket, Exception e) {
+		// TODO: error handling
+		System.out.println(String.format("[control server exception: %s]", e.toString()));
+	}
 
-    @Override
-    public void onStart() {
-        // TODO: server startup
-        System.out.println("[control server is up]");
-    }
+	@Override
+	public void onStart() {
+		// TODO: server startup
+		System.out.println("[control server is up]");
+	}
 
-    // ========== util classes ==========
+	// ========== util classes ==========
 
-    private static class ControlMsgPublisher {
+	private static class ControlMsgPublisher {
 
-        private double linear = 0.0;
-        private double angular = 0.0;
-        private double linearScale = 1.0;
-        private double angularScale = 1.0;
+		private double linear = 0.0;
+		private double angular = 0.0;
+		private double linearScale = 1.0;
+		private double angularScale = 1.0;
 
-        private final Thread msgPublishThread;
+		private final Thread msgPublishThread;
 
-        private ControlMsgPublisher(final long intervalMillis) {
-            msgPublishThread = new Thread(new Runnable() {
-                public void run() {
-                    while (!Thread.currentThread().isInterrupted()) {
-                        double linearValue, angularValue;
-                        synchronized (this) {
-                            linearValue = linear * linearScale;
-                            angularValue = angular * angularScale;
-                        }
+		private ControlMsgPublisher(final long intervalMillis) {
+			msgPublishThread = new Thread(new Runnable() {
+				public void run() {
+					while (!Thread.currentThread().isInterrupted()) {
+						double linearValue, angularValue;
+						synchronized (this) {
+							linearValue = linear * linearScale;
+							angularValue = angular * angularScale;
+						}
 
-                        try {
-                            NodeManager.acquireControllerNode().publish(linearValue, angularValue);
-                        }
-                        catch (RosRuntimeException e) {
-                            System.out.println("[control message publish failed]");
-                        }
+						try {
+							NodeManager.acquireControllerNode().publish(linearValue, angularValue);
+						} catch (RosRuntimeException e) {
+							System.out.println("[control message publish failed]");
+						}
 
-                        try {
-                            Thread.sleep(intervalMillis);
-                        }
-                        catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                }
-            });
-            msgPublishThread.start();
-        }
+						try {
+							Thread.sleep(intervalMillis);
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+						}
+					}
+				}
+			});
+			msgPublishThread.start();
+		}
 
-        private void setLinear(double value) {
-            if (Math.abs(value) > 1.0) {
-                // TODO: exception
-                throw new RuntimeException();
-            }
+		private void setLinear(double value) {
+			if (Math.abs(value) > 1.0) {
+				// TODO: exception
+				throw new RuntimeException();
+			}
 
-            synchronized (this) {
-                linear = value;
-            }
-        }
+			synchronized (this) {
+				linear = value;
+			}
+		}
 
-        private void setAngular(double value) {
-            if (Math.abs(value) > 1.0) {
-                // TODO: exception
-                throw new RuntimeException();
-            }
+		private void setAngular(double value) {
+			if (Math.abs(value) > 1.0) {
+				// TODO: exception
+				throw new RuntimeException();
+			}
 
-            synchronized (this) {
-                angular = value;
-            }
-        }
+			synchronized (this) {
+				angular = value;
+			}
+		}
 
-        private void setLinearScale(double value) {
-            synchronized (this) {
-                linearScale = value;
-            }
-        }
+		private void setLinearScale(double value) {
+			synchronized (this) {
+				linearScale = value;
+			}
+		}
 
-        private void setAngularScale(double value) {
-            synchronized (this) {
-                angularScale = value;
-            }
-        }
+		private void setAngularScale(double value) {
+			synchronized (this) {
+				angularScale = value;
+			}
+		}
 
-    }
-    
+	}
+
 }

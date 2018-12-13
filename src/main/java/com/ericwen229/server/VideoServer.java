@@ -17,54 +17,53 @@ import java.util.Base64;
 
 public class VideoServer extends WebSocketServer implements Observer<sensor_msgs.Image> {
 
-    // ========== constructor ==========
+	// ========== constructor ==========
 
-    public VideoServer(@NonNull InetSocketAddress address) {
-        super(address);
-        System.out.println(String.format("[video server starting on %s:%d]", address.getHostName(), address.getPort()));
+	public VideoServer(@NonNull InetSocketAddress address) {
+		super(address);
+		System.out.println(String.format("[video server starting on %s:%d]", address.getHostName(), address.getPort()));
 
-        NodeManager.acquireVideoMonitorNode().addObserver(this);
-    }
+		NodeManager.acquireVideoMonitorNode().addObserver(this);
+	}
 
-    // ========== overridden methods ==========
+	// ========== overridden methods ==========
 
-    public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-        // TODO: client connection handling
-        System.out.println("[a client just came to video server]");
-    }
+	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
+		// TODO: client connection handling
+		System.out.println("[a client just came to video server]");
+	}
 
-    public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-        // TODO: client removal handling
-        System.out.println("[a client has left video server]");
-    }
+	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
+		// TODO: client removal handling
+		System.out.println("[a client has left video server]");
+	}
 
-    public void onMessage(WebSocket webSocket, String s) {
-        // TODO: ignore message
-    }
+	public void onMessage(WebSocket webSocket, String s) {
+		// TODO: ignore message
+	}
 
-    public void onError(WebSocket webSocket, Exception e) {
-        // TODO: error handling
-        System.out.println(String.format("[video server exception: %s]", e.toString()));
-    }
+	public void onError(WebSocket webSocket, Exception e) {
+		// TODO: error handling
+		System.out.println(String.format("[video server exception: %s]", e.toString()));
+	}
 
-    public void onStart() {
-        // TODO: server startup
-        System.out.println("[video server is up]");
-    }
+	public void onStart() {
+		// TODO: server startup
+		System.out.println("[video server is up]");
+	}
 
-    // ========== interface required methods ==========
+	// ========== interface required methods ==========
 
-    public void notify(sensor_msgs.Image imageMsg) {
-        BufferedImage image = Image.imageFromMessage(imageMsg);
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            ImageIO.write(image, "jpeg", outputStream);
-        }
-        catch (IOException e) {
-            // TODO
-            throw new RuntimeException();
-        }
-        broadcast(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
-    }
+	public void notify(sensor_msgs.Image imageMsg) {
+		BufferedImage image = Image.imageFromMessage(imageMsg);
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		try {
+			ImageIO.write(image, "jpeg", outputStream);
+		} catch (IOException e) {
+			// TODO
+			throw new RuntimeException();
+		}
+		broadcast(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
+	}
 
 }

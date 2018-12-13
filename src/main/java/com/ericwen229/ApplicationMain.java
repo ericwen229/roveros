@@ -10,19 +10,20 @@ import java.net.InetSocketAddress;
 
 public class ApplicationMain {
 
-    public static void main(String[] args) {
-        try {
-            Config.loadConfig(new FileInputStream(args[0]));
-        }
-        catch (FileNotFoundException e) {
-            // TODO
-        }
+	public static void main(String[] args) {
+		try {
+			Config.loadConfig(new FileInputStream(args[0]));
+		} catch (FileNotFoundException e) {
+			// TODO
+		}
 
-        ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getIntProperty("controlserverport")));
-        controlServer.start(); // it will start in a new thread
+		ControlServer controlServer = new ControlServer(
+				new InetSocketAddress(
+						Config.getIntProperty("controlserverport")));
+		controlServer.start(); // it will start in a new thread
 
-        VideoServer videoServer = new VideoServer(new InetSocketAddress(Config.getIntProperty("videoserverport")));
-        videoServer.start(); // it will start in a new thread
-    }
+		VideoServer videoServer = new VideoServer(new InetSocketAddress(Config.getIntProperty("videoserverport")));
+		videoServer.start(); // it will start in a new thread
+	}
 
 }
