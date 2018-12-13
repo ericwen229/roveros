@@ -1,14 +1,12 @@
 package com.ericwen229.server;
 
 import com.ericwen229.node.NodeManager;
-import com.ericwen229.node.RoverVideoMonitorNode;
-import com.ericwen229.util.ImageUtil;
+import com.ericwen229.util.Image;
 import com.ericwen229.util.pattern.Observer;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
-import sensor_msgs.Image;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -17,7 +15,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Base64;
 
-public class VideoServer extends WebSocketServer implements Observer<Image> {
+public class VideoServer extends WebSocketServer implements Observer<sensor_msgs.Image> {
 
     // ========== constructor ==========
 
@@ -56,8 +54,8 @@ public class VideoServer extends WebSocketServer implements Observer<Image> {
 
     // ========== interface required methods ==========
 
-    public void notify(Image imageMsg) {
-        BufferedImage image = ImageUtil.imageFromMessage(imageMsg);
+    public void notify(sensor_msgs.Image imageMsg) {
+        BufferedImage image = Image.imageFromMessage(imageMsg);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         try {
             ImageIO.write(image, "jpeg", outputStream);
