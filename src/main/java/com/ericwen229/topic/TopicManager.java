@@ -9,15 +9,18 @@ import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
 import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
+import org.ros.node.topic.Subscriber;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TopicManager {
 
 	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull String topicType) {
 		return new PublisherHandler<T>() {
-			// volatile is necessary here
+			// IMPORTANT: volatile is necessary here
 			// otherwise the handler can't know publisher is ready
 			private volatile Publisher<T> publisher = null;
 
@@ -25,6 +28,7 @@ public class TopicManager {
 				NodeExecutor.executeNode(new NodeMain() {
 					@Override
 					public GraphName getDefaultNodeName() {
+						// TODO: internal name management
 						return GraphName.of("foo");
 					}
 
@@ -67,31 +71,82 @@ public class TopicManager {
 		};
 	}
 
-	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull SubscriberHandler<T> subscriberHandler) {
+	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull String topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
+
+		{
+			NodeExecutor.executeNode(new NodeMain() {
+				@Override
+				public GraphName getDefaultNodeName() {
+					// TODO: internal name management
+					return GraphName.of("bar");
+				}
+
+				@Override
+				public void onStart(ConnectedNode connectedNode) {
+					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicType);
+					subscriber.addMessageListener(subscriberHandler::accept);
+				}
+
+				@Override
+				public void onShutdown(Node node) {
+				}
+
+				@Override
+				public void onShutdownComplete(Node node) {
+				}
+
+				@Override
+				public void onError(Node node, Throwable throwable) {
+					node.shutdown();
+				}
+			});
+		}
+
 	}
 
-	// sample program
+	// ========== sample program ==========
 
 	public static void main(String[] args) {
+		// load config
 		try {
 			Config.loadConfig(new FileInputStream(args[0]));
 		} catch (FileNotFoundException e) {
-			// TODO
+			System.exit(-1);
 		}
 
-		PublisherHandler<std_msgs.String> handler = publishOnTopic(GraphName.of("/foo"), std_msgs.String._TYPE);
-		while (!handler.isReady()) {}
-		std_msgs.String msg = handler.newMessage();
-		msg.setData("nee");
-		while (true) {
-			handler.publish(msg);
-			try {
-				Thread.sleep(1000);
+		ExecutorService executor = Executors.newCachedThreadPool();
+
+		// publisher
+		executor.execute(() -> {
+			// create handler
+			PublisherHandler<std_msgs.String> handler = publishOnTopic(GraphName.of("/foo"), std_msgs.String._TYPE);
+
+			// wait for handler to get ready
+			while (!handler.isReady()) {}
+
+			// prepare and publish message
+			std_msgs.String msg = handler.newMessage();
+			for (int i = 0; i < 1000; i++) {
+				msg.setData(String.format("hello #%d", i));
+				System.out.println(String.format("sent %s", msg.getData()));
+				handler.publish(msg);
+				try {
+					Thread.sleep(1000);
+				}
+				catch (InterruptedException e) {}
 			}
-			catch (InterruptedException e) {
-				break;
-			}
-		}
+		});
+
+		// subscriber
+		executor.execute(() -> {
+			// create handler
+			SubscriberHandler<std_msgs.String> handler = msg -> {
+				System.out.println(String.format("received %s", msg.getData()));
+			};
+
+			// subscribe
+			subscribeToTopic(GraphName.of("/foo"), std_msgs.String._TYPE, handler);
+		});
 	}
 
 }
