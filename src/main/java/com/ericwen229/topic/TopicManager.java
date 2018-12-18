@@ -72,36 +72,32 @@ public class TopicManager {
 	}
 
 	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull String topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
+		NodeExecutor.executeNode(new NodeMain() {
+			@Override
+			public GraphName getDefaultNodeName() {
+				// TODO: internal name management
+				return GraphName.of("bar");
+			}
 
-		{
-			NodeExecutor.executeNode(new NodeMain() {
-				@Override
-				public GraphName getDefaultNodeName() {
-					// TODO: internal name management
-					return GraphName.of("bar");
-				}
+			@Override
+			public void onStart(ConnectedNode connectedNode) {
+				Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicType);
+				subscriber.addMessageListener(subscriberHandler::accept);
+			}
 
-				@Override
-				public void onStart(ConnectedNode connectedNode) {
-					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicType);
-					subscriber.addMessageListener(subscriberHandler::accept);
-				}
+			@Override
+			public void onShutdown(Node node) {
+			}
 
-				@Override
-				public void onShutdown(Node node) {
-				}
+			@Override
+			public void onShutdownComplete(Node node) {
+			}
 
-				@Override
-				public void onShutdownComplete(Node node) {
-				}
-
-				@Override
-				public void onError(Node node, Throwable throwable) {
-					node.shutdown();
-				}
-			});
-		}
-
+			@Override
+			public void onError(Node node, Throwable throwable) {
+				node.shutdown();
+			}
+		});
 	}
 
 	// ========== sample program ==========
