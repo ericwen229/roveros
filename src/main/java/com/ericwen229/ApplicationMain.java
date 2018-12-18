@@ -17,9 +17,7 @@ public class ApplicationMain {
 			// TODO
 		}
 
-		ControlServer controlServer = new ControlServer(
-				new InetSocketAddress(
-						Config.getIntProperty("controlserverport")));
+		ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getIntProperty("controlserverport")));
 		controlServer.start(); // it will start in a new thread
 
 		VideoServer videoServer = new VideoServer(new InetSocketAddress(Config.getIntProperty("videoserverport")));
