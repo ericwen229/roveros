@@ -1,14 +1,16 @@
 package com.ericwen229.node;
 
 import com.ericwen229.util.Config;
+import lombok.NonNull;
 import org.ros.node.DefaultNodeMainExecutor;
 import org.ros.node.NodeConfiguration;
+import org.ros.node.NodeMain;
 import org.ros.node.NodeMainExecutor;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class NodeManager {
+public class NodeExecutor {
 
 	private static final NodeMainExecutor defaultNodeExecutor = DefaultNodeMainExecutor.newDefault();
 	private static NodeConfiguration nodeConfig = null;
@@ -44,6 +46,10 @@ public class NodeManager {
 			defaultNodeExecutor.execute(videoMonitorNode, getConfiguration());
 		}
 		return videoMonitorNode;
+	}
+
+	public static void executeNode(@NonNull NodeMain node) {
+		defaultNodeExecutor.execute(node, getConfiguration());
 	}
 
 }

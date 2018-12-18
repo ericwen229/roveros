@@ -1,6 +1,6 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.NodeManager;
+import com.ericwen229.node.NodeExecutor;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -82,7 +82,7 @@ public class ControlServer extends WebSocketServer {
 						}
 
 						try {
-							NodeManager.acquireControllerNode().publish(linearValue, angularValue);
+							NodeExecutor.acquireControllerNode().publish(linearValue, angularValue);
 						} catch (RosRuntimeException e) {
 							System.out.println("[control message publish failed]");
 						}

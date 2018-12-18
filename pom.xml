@@ -29,6 +29,11 @@
         </dependency>
         <dependency>
             <groupId>org.ros.rosjava_messages</groupId>
+            <artifactId>std_msgs</artifactId>
+            <version>0.5.11</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ros.rosjava_messages</groupId>
             <artifactId>geometry_msgs</artifactId>
             <version>1.12.6</version>
         </dependency>
