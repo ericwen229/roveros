@@ -3,9 +3,6 @@ package com.ericwen229;
 import com.ericwen229.server.ControlServer;
 import com.ericwen229.server.VideoServer;
 import com.ericwen229.util.Config;
-
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
 import java.util.logging.Logger;
 

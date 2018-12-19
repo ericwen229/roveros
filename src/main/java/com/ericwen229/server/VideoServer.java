@@ -24,30 +24,38 @@ public class VideoServer extends WebSocketServer {
 
 	public VideoServer(@NonNull InetSocketAddress address) {
 		super(address);
-		TopicManager.subscribeToTopic(GraphName.of("/camera/rgb/image_raw"), sensor_msgs.Image._TYPE, this::imageMessageHandler);
+		TopicManager.subscribeToTopic(
+				GraphName.of("/camera/rgb/image_raw"),
+				sensor_msgs.Image._TYPE,
+				this::imageMessageHandler);
 	}
 
 	// ========== overridden methods ==========
 
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		logger.warning(String.format("Video server connection established: %s", webSocket.getRemoteSocketAddress()));
+		logger.warning(
+				String.format("Video server connection established: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-		logger.info(String.format("Video server connection closed: %s", webSocket.getRemoteSocketAddress()));
+		logger.info(
+				String.format("Video server connection closed: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onMessage(WebSocket webSocket, String s) {
-		logger.warning(String.format("Unexpected message to video server from: %s", webSocket.getRemoteSocketAddress()));
+		logger.warning(
+				String.format("Unexpected message to video server from: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onError(WebSocket webSocket, Exception e) {
-		logger.warning(String.format("Video server exception: %s", e.getClass().getName()));
+		logger.warning(
+				String.format("Video server exception: %s", e.getClass().getName()));
 		webSocket.close();
 	}
 
 	public void onStart() {
-		logger.info(String.format("Video server URI: %s", getAddress()));
+		logger.info(
+				String.format("Video server URI: %s", getAddress()));
 	}
 
 	// ========== main logic ==========
