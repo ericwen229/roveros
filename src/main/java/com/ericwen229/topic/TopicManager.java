@@ -1,6 +1,6 @@
 package com.ericwen229.topic;
 
-import com.ericwen229.node.NodeExecutor;
+import com.ericwen229.node.NodeManager;
 import com.ericwen229.util.Config;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
@@ -25,7 +25,7 @@ public class TopicManager {
 			private volatile Publisher<T> publisher = null;
 
 			{
-				NodeExecutor.executeNode(new NodeMain() {
+				NodeManager.executeNode(new NodeMain() {
 					@Override
 					public GraphName getDefaultNodeName() {
 						// TODO: internal name management
@@ -72,7 +72,7 @@ public class TopicManager {
 	}
 
 	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull String topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
-		NodeExecutor.executeNode(new NodeMain() {
+		NodeManager.executeNode(new NodeMain() {
 			@Override
 			public GraphName getDefaultNodeName() {
 				// TODO: internal name management

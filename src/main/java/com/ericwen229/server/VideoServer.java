@@ -1,6 +1,6 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.NodeExecutor;
+import com.ericwen229.node.NodeManager;
 import com.ericwen229.util.Image;
 import com.ericwen229.util.pattern.Observer;
 import lombok.NonNull;
@@ -23,7 +23,7 @@ public class VideoServer extends WebSocketServer implements Observer<sensor_msgs
 		super(address);
 		System.out.println(String.format("[video server starting on %s:%d]", address.getHostName(), address.getPort()));
 
-		NodeExecutor.acquireVideoMonitorNode().addObserver(this);
+		NodeManager.acquireVideoMonitorNode().addObserver(this);
 	}
 
 	// ========== overridden methods ==========

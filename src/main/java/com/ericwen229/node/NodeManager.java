@@ -10,7 +10,7 @@ import org.ros.node.NodeMainExecutor;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-public class NodeExecutor {
+public class NodeManager {
 
 	private static final NodeMainExecutor defaultNodeExecutor = DefaultNodeMainExecutor.newDefault();
 	private static NodeConfiguration nodeConfig = null;
