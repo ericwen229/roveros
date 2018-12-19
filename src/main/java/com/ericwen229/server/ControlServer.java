@@ -1,11 +1,14 @@
 package com.ericwen229.server;
 
 import com.ericwen229.node.NodeManager;
+import com.ericwen229.topic.PublisherHandler;
+import com.ericwen229.topic.TopicManager;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.ros.exception.RosRuntimeException;
+import org.ros.namespace.GraphName;
 
 import java.net.InetSocketAddress;
 import java.util.Scanner;
@@ -72,6 +75,7 @@ public class ControlServer extends WebSocketServer {
 		private final Thread msgPublishThread;
 
 		private ControlMsgPublisher(final long intervalMillis) {
+			final PublisherHandler<geometry_msgs.Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist._TYPE);
 			msgPublishThread = new Thread(new Runnable() {
 				public void run() {
 					while (!Thread.currentThread().isInterrupted()) {
@@ -81,10 +85,11 @@ public class ControlServer extends WebSocketServer {
 							angularValue = angular * angularScale;
 						}
 
-						try {
-							NodeManager.acquireControllerNode().publish(linearValue, angularValue);
-						} catch (RosRuntimeException e) {
-							System.out.println("[control message publish failed]");
+						if (handler.isReady()) {
+							geometry_msgs.Twist msg = handler.newMessage();
+							msg.getLinear().setX(linearValue);
+							msg.getAngular().setZ(angularValue);
+							handler.publish(msg);
 						}
 
 						try {

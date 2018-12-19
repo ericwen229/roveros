@@ -1,12 +1,12 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.NodeManager;
+import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Image;
-import com.ericwen229.util.pattern.Observer;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
+import org.ros.namespace.GraphName;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Base64;
 
-public class VideoServer extends WebSocketServer implements Observer<sensor_msgs.Image> {
+public class VideoServer extends WebSocketServer {
 
 	// ========== constructor ==========
 
@@ -23,7 +23,7 @@ public class VideoServer extends WebSocketServer implements Observer<sensor_msgs
 		super(address);
 		System.out.println(String.format("[video server starting on %s:%d]", address.getHostName(), address.getPort()));
 
-		NodeManager.acquireVideoMonitorNode().addObserver(this);
+		TopicManager.subscribeToTopic(GraphName.of("/camera/rgb/image_raw"), sensor_msgs.Image._TYPE, this::imageMessageHandler);
 	}
 
 	// ========== overridden methods ==========
@@ -54,7 +54,7 @@ public class VideoServer extends WebSocketServer implements Observer<sensor_msgs
 
 	// ========== interface required methods ==========
 
-	public void notify(sensor_msgs.Image imageMsg) {
+	public void imageMessageHandler(sensor_msgs.Image imageMsg) {
 		BufferedImage image = Image.imageFromMessage(imageMsg);
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		try {

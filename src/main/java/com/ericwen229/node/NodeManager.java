@@ -15,9 +15,6 @@ public class NodeManager {
 	private static final NodeMainExecutor defaultNodeExecutor = DefaultNodeMainExecutor.newDefault();
 	private static NodeConfiguration nodeConfig = null;
 
-	private static RoverControllerNode controllerNode = null;
-	private static RoverVideoMonitorNode videoMonitorNode = null;
-
 	private static NodeConfiguration getConfiguration() {
 		if (nodeConfig == null) {
 			try {
@@ -29,23 +26,6 @@ public class NodeManager {
 			}
 		}
 		return nodeConfig;
-	}
-
-	public static RoverControllerNode acquireControllerNode() {
-		// TODO: may not be singleton in the future
-		if (controllerNode == null) {
-			controllerNode = new RoverControllerNode();
-			defaultNodeExecutor.execute(controllerNode, getConfiguration());
-		}
-		return controllerNode;
-	}
-
-	public static RoverVideoMonitorNode acquireVideoMonitorNode() {
-		if (videoMonitorNode == null) {
-			videoMonitorNode = new RoverVideoMonitorNode();
-			defaultNodeExecutor.execute(videoMonitorNode, getConfiguration());
-		}
-		return videoMonitorNode;
 	}
 
 	public static void executeNode(@NonNull NodeMain node) {
