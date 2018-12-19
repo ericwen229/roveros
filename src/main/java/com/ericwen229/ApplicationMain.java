@@ -7,14 +7,23 @@ import com.ericwen229.util.Config;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.net.InetSocketAddress;
+import java.util.logging.Logger;
 
 public class ApplicationMain {
 
+	private static final Logger logger = Logger.getLogger(ApplicationMain.class.getName());
+
 	public static void main(String[] args) {
+		if (args.length != 1) {
+			throw new RuntimeException(String.format("Incorrect argument number. %d received but 1 expected.", args.length
+			));
+		}
+
 		try {
+			logger.info(String.format("Configuration file path: %s", args[0]));
 			Config.loadConfig(new FileInputStream(args[0]));
 		} catch (FileNotFoundException e) {
-			// TODO
+			throw new RuntimeException(String.format("Configuration file %s not found.", args[0]));
 		}
 
 		ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getIntProperty("controlserverport")));

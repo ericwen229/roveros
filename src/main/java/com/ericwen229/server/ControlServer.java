@@ -1,19 +1,20 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.NodeManager;
 import com.ericwen229.topic.PublisherHandler;
 import com.ericwen229.topic.TopicManager;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
-import org.ros.exception.RosRuntimeException;
 import org.ros.namespace.GraphName;
 
 import java.net.InetSocketAddress;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 public class ControlServer extends WebSocketServer {
+
+	private static final Logger logger = Logger.getLogger(ControlServer.class.getName());
 
 	// ========== members ==========
 
@@ -23,7 +24,6 @@ public class ControlServer extends WebSocketServer {
 
 	public ControlServer(@NonNull InetSocketAddress address) {
 		super(address);
-		System.out.println(String.format("[control server starting on %s:%d]", address.getHostName(), address.getPort()));
 	}
 
 	// ========== overridden methods ==========
@@ -42,7 +42,6 @@ public class ControlServer extends WebSocketServer {
 
 	@Override
 	public void onMessage(WebSocket webSocket, String s) {
-		// TODO: protocol design
 		Scanner scanner = new Scanner(s);
 		double linear = scanner.nextDouble();
 		double angular = scanner.nextDouble();
@@ -59,8 +58,7 @@ public class ControlServer extends WebSocketServer {
 
 	@Override
 	public void onStart() {
-		// TODO: server startup
-		System.out.println("[control server is up]");
+		logger.info(String.format("Control server URI: %s", getAddress()));
 	}
 
 	// ========== util classes ==========

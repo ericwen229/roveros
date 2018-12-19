@@ -14,15 +14,16 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Base64;
+import java.util.logging.Logger;
 
 public class VideoServer extends WebSocketServer {
+
+	private static final Logger logger = Logger.getLogger(VideoServer.class.getName());
 
 	// ========== constructor ==========
 
 	public VideoServer(@NonNull InetSocketAddress address) {
 		super(address);
-		System.out.println(String.format("[video server starting on %s:%d]", address.getHostName(), address.getPort()));
-
 		TopicManager.subscribeToTopic(GraphName.of("/camera/rgb/image_raw"), sensor_msgs.Image._TYPE, this::imageMessageHandler);
 	}
 
@@ -48,11 +49,10 @@ public class VideoServer extends WebSocketServer {
 	}
 
 	public void onStart() {
-		// TODO: server startup
-		System.out.println("[video server is up]");
+		logger.info(String.format("Video server URI: %s", getAddress()));
 	}
 
-	// ========== interface required methods ==========
+	// ========== main logic ==========
 
 	public void imageMessageHandler(sensor_msgs.Image imageMsg) {
 		BufferedImage image = Image.imageFromMessage(imageMsg);
