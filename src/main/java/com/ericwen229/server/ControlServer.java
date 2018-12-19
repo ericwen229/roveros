@@ -30,14 +30,12 @@ public class ControlServer extends WebSocketServer {
 
 	@Override
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		// TODO: client connection handling
-		System.out.println("[a client just came to control server]");
+		logger.warning(String.format("Control server connection established: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-		// TODO: client removal handling
-		System.out.println("[a client has left control server]");
+		logger.info(String.format("Control server connection closed: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
@@ -52,8 +50,8 @@ public class ControlServer extends WebSocketServer {
 
 	@Override
 	public void onError(WebSocket webSocket, Exception e) {
-		// TODO: error handling
-		System.out.println(String.format("[control server exception: %s]", e.toString()));
+		logger.warning(String.format("Control server exception: %s", e.getClass().getName()));
+		webSocket.close();
 	}
 
 	@Override
@@ -102,22 +100,12 @@ public class ControlServer extends WebSocketServer {
 		}
 
 		private void setLinear(double value) {
-			if (Math.abs(value) > 1.0) {
-				// TODO: exception
-				throw new RuntimeException();
-			}
-
 			synchronized (this) {
 				linear = value;
 			}
 		}
 
 		private void setAngular(double value) {
-			if (Math.abs(value) > 1.0) {
-				// TODO: exception
-				throw new RuntimeException();
-			}
-
 			synchronized (this) {
 				angular = value;
 			}

@@ -19,12 +19,7 @@ public class ApplicationMain {
 			));
 		}
 
-		try {
-			logger.info(String.format("Configuration file path: %s", args[0]));
-			Config.loadConfig(new FileInputStream(args[0]));
-		} catch (FileNotFoundException e) {
-			throw new RuntimeException(String.format("Configuration file %s not found.", args[0]));
-		}
+		Config.loadConfig(args[0]);
 
 		ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getIntProperty("controlserverport")));
 		controlServer.start(); // it will start in a new thread

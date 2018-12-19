@@ -30,22 +30,20 @@ public class VideoServer extends WebSocketServer {
 	// ========== overridden methods ==========
 
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		// TODO: client connection handling
-		System.out.println("[a client just came to video server]");
+		logger.warning(String.format("Video server connection established: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-		// TODO: client removal handling
-		System.out.println("[a client has left video server]");
+		logger.info(String.format("Video server connection closed: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onMessage(WebSocket webSocket, String s) {
-		// TODO: ignore message
+		logger.warning(String.format("Unexpected message to video server from: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onError(WebSocket webSocket, Exception e) {
-		// TODO: error handling
-		System.out.println(String.format("[video server exception: %s]", e.toString()));
+		logger.warning(String.format("Video server exception: %s", e.getClass().getName()));
+		webSocket.close();
 	}
 
 	public void onStart() {

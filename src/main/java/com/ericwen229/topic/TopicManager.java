@@ -11,8 +11,6 @@ import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -104,12 +102,9 @@ public class TopicManager {
 
 	public static void main(String[] args) {
 		// load config
-		try {
-			Config.loadConfig(new FileInputStream(args[0]));
-		} catch (FileNotFoundException e) {
-			System.exit(-1);
-		}
+		Config.loadConfig(args[0]);
 
+		// create thread pool
 		ExecutorService executor = Executors.newCachedThreadPool();
 
 		// publisher

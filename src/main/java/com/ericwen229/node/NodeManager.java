@@ -15,11 +15,11 @@ public class NodeManager {
 	private static final NodeMainExecutor defaultNodeExecutor = DefaultNodeMainExecutor.newDefault();
 	private static NodeConfiguration nodeConfig = null;
 
-	private static NodeConfiguration getConfiguration() {
+	private static NodeConfiguration getNodeConfiguration() {
 		if (nodeConfig == null) {
 			try {
-				URI masterURI = new URI(Config.getStringProperty("masteruri"));
-				String host = Config.getStringProperty("host");
+				URI masterURI = new URI(Config.getProperty("masteruri"));
+				String host = Config.getProperty("host");
 				nodeConfig = NodeConfiguration.newPublic(host, masterURI);
 			} catch (URISyntaxException e) {
 				throw new RuntimeException();
@@ -29,7 +29,7 @@ public class NodeManager {
 	}
 
 	public static void executeNode(@NonNull NodeMain node) {
-		defaultNodeExecutor.execute(node, getConfiguration());
+		defaultNodeExecutor.execute(node, getNodeConfiguration());
 	}
 
 }
