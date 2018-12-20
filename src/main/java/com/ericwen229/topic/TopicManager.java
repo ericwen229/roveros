@@ -12,7 +12,6 @@ import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
 
-import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
@@ -21,85 +20,68 @@ public class TopicManager {
 
 	private static final Logger logger = Logger.getLogger(TopicManager.class.getName());
 
-	private static final HashMap<GraphName, PublisherHandler<? extends Message>> topicNameToPublisherHandler = new HashMap<>();
-	private static final HashMap<GraphName, SubscriberHandler<? extends Message>> topicNameToSubscriberHandler = new HashMap<>();
-
 	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull String topicType) {
-		PublisherHandler<? extends Message> handler = topicNameToPublisherHandler.getOrDefault(topicName, null);
-		if (handler != null) {
-			if (topicType != handler.getTopicType()) {
-				// TODO: exception handling
-				throw new RuntimeException();
+		return new PublisherHandler<T>() {
+			// IMPORTANT: volatile is necessary here
+			// otherwise the handler can't know publisher is ready
+			private volatile Publisher<T> publisher = null;
+
+			{
+				NodeManager.executeNode(new NodeMain() {
+					@Override
+					public GraphName getDefaultNodeName() {
+						// TODO: internal name management
+						return GraphName.of("foo");
+					}
+
+					@Override
+					public void onStart(ConnectedNode connectedNode) {
+						try {
+							// TODO
+							publisher = connectedNode.newPublisher(topicName, topicType);
+						}
+						catch (RosMessageRuntimeException e) {
+							// TODO: exception handling
+						}
+					}
+
+					@Override
+					public void onShutdown(Node node) {
+						publisher.shutdown();
+						publisher = null;
+					}
+
+					@Override
+					public void onShutdownComplete(Node node) {
+					}
+
+					@Override
+					public void onError(Node node, Throwable throwable) {
+						node.shutdown();
+					}
+				});
 			}
-			else {
-				return (PublisherHandler<T>)handler;
+
+			@Override
+			public void publish(@NonNull T message) {
+				publisher.publish(message);
 			}
-		}
-		else {
-			PublisherHandler<T> newPublisherHandler = new PublisherHandler<T>() {
-				// IMPORTANT: volatile is necessary here
-				// otherwise the handler can't know publisher is ready
-				private volatile Publisher<T> publisher = null;
 
-				{
-					NodeManager.executeNode(new NodeMain() {
-						@Override
-						public GraphName getDefaultNodeName() {
-							// TODO: internal name management
-							return GraphName.of("foo");
-						}
+			@Override
+			public T newMessage() {
+				return publisher.newMessage();
+			}
 
-						@Override
-						public void onStart(ConnectedNode connectedNode) {
-							try {
-								publisher = connectedNode.newPublisher(topicName, topicType);
-							}
-							catch (RosMessageRuntimeException e) {
-								// TODO: exception handling
-							}
-						}
+			@Override
+			public boolean isReady() {
+				return publisher != null;
+			}
 
-						@Override
-						public void onShutdown(Node node) {
-							publisher.shutdown();
-							publisher = null;
-						}
-
-						@Override
-						public void onShutdownComplete(Node node) {
-						}
-
-						@Override
-						public void onError(Node node, Throwable throwable) {
-							node.shutdown();
-						}
-					});
-				}
-
-				@Override
-				public void publish(@NonNull T message) {
-					publisher.publish(message);
-				}
-
-				@Override
-				public T newMessage() {
-					return publisher.newMessage();
-				}
-
-				@Override
-				public boolean isReady() {
-					return publisher != null;
-				}
-
-				@Override
-				public String getTopicType() {
-					return topicType;
-				}
-			};
-
-			topicNameToPublisherHandler.put(topicName, newPublisherHandler);
-			return newPublisherHandler;
-		}
+			@Override
+			public String getTopicTypeStr() {
+				return topicType;
+			}
+		};
 	}
 
 	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull String topicType, @NonNull SubscriberHandler<T> subscriberHandler) {

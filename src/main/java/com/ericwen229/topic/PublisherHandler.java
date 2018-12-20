@@ -7,6 +7,6 @@ public interface PublisherHandler<T extends Message> {
 	void publish(T message);
 	T newMessage();
 	boolean isReady();
-	String getTopicType();
+	String getTopicTypeStr();
 
 }
