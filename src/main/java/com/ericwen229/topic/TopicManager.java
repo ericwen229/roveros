@@ -3,6 +3,7 @@ package com.ericwen229.topic;
 import com.ericwen229.node.NodeManager;
 import com.ericwen229.util.Config;
 import lombok.NonNull;
+import org.ros.exception.RosMessageRuntimeException;
 import org.ros.internal.message.Message;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
@@ -11,62 +12,94 @@ import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
 
+import java.util.HashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 public class TopicManager {
 
+	private static final Logger logger = Logger.getLogger(TopicManager.class.getName());
+
+	private static final HashMap<GraphName, PublisherHandler<? extends Message>> topicNameToPublisherHandler = new HashMap<>();
+	private static final HashMap<GraphName, SubscriberHandler<? extends Message>> topicNameToSubscriberHandler = new HashMap<>();
+
 	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull String topicType) {
-		return new PublisherHandler<T>() {
-			// IMPORTANT: volatile is necessary here
-			// otherwise the handler can't know publisher is ready
-			private volatile Publisher<T> publisher = null;
-
-			{
-				NodeManager.executeNode(new NodeMain() {
-					@Override
-					public GraphName getDefaultNodeName() {
-						// TODO: internal name management
-						return GraphName.of("foo");
-					}
-
-					@Override
-					public void onStart(ConnectedNode connectedNode) {
-						publisher = connectedNode.newPublisher(topicName, topicType);
-					}
-
-					@Override
-					public void onShutdown(Node node) {
-						publisher.shutdown();
-						publisher = null;
-					}
-
-					@Override
-					public void onShutdownComplete(Node node) {
-					}
-
-					@Override
-					public void onError(Node node, Throwable throwable) {
-						node.shutdown();
-					}
-				});
+		PublisherHandler<? extends Message> handler = topicNameToPublisherHandler.getOrDefault(topicName, null);
+		if (handler != null) {
+			if (topicType != handler.getTopicType()) {
+				// TODO: exception handling
+				throw new RuntimeException();
 			}
-
-			@Override
-			public void publish(@NonNull T message) {
-				publisher.publish(message);
+			else {
+				return (PublisherHandler<T>)handler;
 			}
+		}
+		else {
+			PublisherHandler<T> newPublisherHandler = new PublisherHandler<T>() {
+				// IMPORTANT: volatile is necessary here
+				// otherwise the handler can't know publisher is ready
+				private volatile Publisher<T> publisher = null;
 
-			@Override
-			public T newMessage() {
-				return publisher.newMessage();
-			}
+				{
+					NodeManager.executeNode(new NodeMain() {
+						@Override
+						public GraphName getDefaultNodeName() {
+							// TODO: internal name management
+							return GraphName.of("foo");
+						}
 
-			@Override
-			public boolean isReady() {
-				return publisher != null;
-			}
-		};
+						@Override
+						public void onStart(ConnectedNode connectedNode) {
+							try {
+								publisher = connectedNode.newPublisher(topicName, topicType);
+							}
+							catch (RosMessageRuntimeException e) {
+								// TODO: exception handling
+							}
+						}
+
+						@Override
+						public void onShutdown(Node node) {
+							publisher.shutdown();
+							publisher = null;
+						}
+
+						@Override
+						public void onShutdownComplete(Node node) {
+						}
+
+						@Override
+						public void onError(Node node, Throwable throwable) {
+							node.shutdown();
+						}
+					});
+				}
+
+				@Override
+				public void publish(@NonNull T message) {
+					publisher.publish(message);
+				}
+
+				@Override
+				public T newMessage() {
+					return publisher.newMessage();
+				}
+
+				@Override
+				public boolean isReady() {
+					return publisher != null;
+				}
+
+				@Override
+				public String getTopicType() {
+					return topicType;
+				}
+			};
+
+			topicNameToPublisherHandler.put(topicName, newPublisherHandler);
+			return newPublisherHandler;
+		}
 	}
 
 	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull String topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
@@ -79,12 +112,19 @@ public class TopicManager {
 
 			@Override
 			public void onStart(ConnectedNode connectedNode) {
-				Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicType);
-				subscriber.addMessageListener(subscriberHandler::accept);
+				try {
+					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicType);
+					subscriber.addMessageListener(subscriberHandler::accept);
+				}
+				catch (RosMessageRuntimeException e) {
+					logger.severe(String.format("Subscription to topic %s with type %s exception: %s", topicName, topicType, e));
+					throw new RuntimeException();
+				}
 			}
 
 			@Override
 			public void onShutdown(Node node) {
+				logger.info(String.format("Subscription node %s shutting down: %s", node.getName(), node.getUri()));
 			}
 
 			@Override
@@ -94,6 +134,7 @@ public class TopicManager {
 			@Override
 			public void onError(Node node, Throwable throwable) {
 				node.shutdown();
+				throw new RuntimeException();
 			}
 		});
 	}
