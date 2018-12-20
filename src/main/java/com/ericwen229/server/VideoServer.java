@@ -26,7 +26,7 @@ public class VideoServer extends WebSocketServer {
 		super(address);
 		TopicManager.subscribeToTopic(
 				GraphName.of("/camera/rgb/image_raw"),
-				sensor_msgs.Image._TYPE,
+				sensor_msgs.Image.class,
 				this::imageMessageHandler);
 	}
 

@@ -71,7 +71,7 @@ public class ControlServer extends WebSocketServer {
 		private final Thread msgPublishThread;
 
 		private ControlMsgPublisher(final long intervalMillis) {
-			final PublisherHandler<geometry_msgs.Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist._TYPE);
+			final PublisherHandler<geometry_msgs.Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
 			msgPublishThread = new Thread(new Runnable() {
 				public void run() {
 					while (!Thread.currentThread().isInterrupted()) {

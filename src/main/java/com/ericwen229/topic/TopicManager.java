@@ -20,13 +20,27 @@ public class TopicManager {
 
 	private static final Logger logger = Logger.getLogger(TopicManager.class.getName());
 
-	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull String topicType) {
+	private static <T extends Message> String getTopicTypeStrFromTopicType(Class<T> topicType) {
+		try {
+			return (String)topicType.getField("_TYPE").get(topicType);
+		}
+		catch (NoSuchFieldException e) {
+			throw new RuntimeException(String.format("Incorrect topic type %s: field _TYPE missing", topicType.getName()));
+		}
+		catch (IllegalAccessException e) {
+			throw new RuntimeException(String.format("Incorrect topic type %s: can't access field _TYPE"));
+		}
+	}
+
+	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
+
 		return new PublisherHandler<T>() {
 			// IMPORTANT: volatile is necessary here
 			// otherwise the handler can't know publisher is ready
 			private volatile Publisher<T> publisher = null;
 
-			{
+			{ // constructor code
 				NodeManager.executeNode(new NodeMain() {
 					@Override
 					public GraphName getDefaultNodeName() {
@@ -38,7 +52,7 @@ public class TopicManager {
 					public void onStart(ConnectedNode connectedNode) {
 						try {
 							// TODO
-							publisher = connectedNode.newPublisher(topicName, topicType);
+							publisher = connectedNode.newPublisher(topicName, topicTypeStr);
 						}
 						catch (RosMessageRuntimeException e) {
 							// TODO: exception handling
@@ -79,12 +93,14 @@ public class TopicManager {
 
 			@Override
 			public String getTopicTypeStr() {
-				return topicType;
+				return topicTypeStr;
 			}
 		};
 	}
 
-	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull String topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
+	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
+		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
+
 		NodeManager.executeNode(new NodeMain() {
 			@Override
 			public GraphName getDefaultNodeName() {
@@ -95,11 +111,11 @@ public class TopicManager {
 			@Override
 			public void onStart(ConnectedNode connectedNode) {
 				try {
-					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicType);
+					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicTypeStr);
 					subscriber.addMessageListener(subscriberHandler::accept);
 				}
 				catch (RosMessageRuntimeException e) {
-					logger.severe(String.format("Subscription to topic %s with type %s exception: %s", topicName, topicType, e));
+					logger.severe(String.format("Subscription to topic %s with type %s exception: %s", topicName, topicTypeStr, e));
 					throw new RuntimeException();
 				}
 			}
@@ -133,7 +149,7 @@ public class TopicManager {
 		// publisher
 		executor.execute(() -> {
 			// create handler
-			PublisherHandler<std_msgs.String> handler = publishOnTopic(GraphName.of("/foo"), std_msgs.String._TYPE);
+			PublisherHandler<std_msgs.String> handler = publishOnTopic(GraphName.of("/foo"), std_msgs.String.class);
 
 			// wait for handler to get ready
 			while (!handler.isReady()) {}
@@ -154,12 +170,10 @@ public class TopicManager {
 		// subscriber
 		executor.execute(() -> {
 			// create handler
-			SubscriberHandler<std_msgs.String> handler = msg -> {
-				System.out.println(String.format("received %s", msg.getData()));
-			};
+			SubscriberHandler<std_msgs.String> handler = msg -> System.out.println(String.format("received %s", msg.getData()));
 
 			// subscribe
-			subscribeToTopic(GraphName.of("/foo"), std_msgs.String._TYPE, handler);
+			subscribeToTopic(GraphName.of("/foo"), std_msgs.String.class, handler);
 		});
 	}
 
