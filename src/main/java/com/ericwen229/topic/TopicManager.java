@@ -51,7 +51,6 @@ public class TopicManager {
 					@Override
 					public void onStart(ConnectedNode connectedNode) {
 						try {
-							// TODO
 							publisher = connectedNode.newPublisher(topicName, topicTypeStr);
 						}
 						catch (RosMessageRuntimeException e) {
@@ -71,7 +70,7 @@ public class TopicManager {
 
 					@Override
 					public void onError(Node node, Throwable throwable) {
-						node.shutdown();
+						// TODO: error handling
 					}
 				});
 			}
@@ -104,7 +103,7 @@ public class TopicManager {
 		NodeManager.executeNode(new NodeMain() {
 			@Override
 			public GraphName getDefaultNodeName() {
-				// TODO: internal name management
+				// TODO: name management
 				return GraphName.of("bar");
 			}
 
@@ -115,8 +114,7 @@ public class TopicManager {
 					subscriber.addMessageListener(subscriberHandler::accept);
 				}
 				catch (RosMessageRuntimeException e) {
-					logger.severe(String.format("Subscription to topic %s with type %s exception: %s", topicName, topicTypeStr, e));
-					throw new RuntimeException();
+					// TODO: exception handling
 				}
 			}
 
@@ -131,8 +129,8 @@ public class TopicManager {
 
 			@Override
 			public void onError(Node node, Throwable throwable) {
+				// TODO: error handling
 				node.shutdown();
-				throw new RuntimeException();
 			}
 		});
 	}
