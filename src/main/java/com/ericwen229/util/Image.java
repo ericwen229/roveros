@@ -4,8 +4,19 @@ import org.jboss.netty.buffer.ChannelBuffer;
 
 import java.awt.image.BufferedImage;
 
+/**
+ * Image utilities related to ROS applications.
+ */
 public class Image {
 
+	// ========== static methods ==========
+
+	/**
+	 * Created image from ROS image message.
+	 *
+	 * @param imageMsg image message
+	 * @return image object
+	 */
 	public static BufferedImage imageFromMessage(sensor_msgs.Image imageMsg) {
 		// TODO: handle different encodings
 		String imageEncoding = imageMsg.getEncoding();
@@ -30,6 +41,14 @@ public class Image {
 		return outputImage;
 	}
 
+	/**
+	 * Create RGB value from given BGR component values
+	 *
+	 * @param b blue component value
+	 * @param g green component value
+	 * @param r red component value
+	 * @return RGB value
+	 */
 	public static int rgbfromBGR(byte b, byte g, byte r) {
 		int color = 0;
 

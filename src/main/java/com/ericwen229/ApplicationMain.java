@@ -18,10 +18,10 @@ public class ApplicationMain {
 
 		Config.loadConfig(args[0]);
 
-		ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getIntProperty("controlserverport")));
+		ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getPropertyAsInt("controlserverport")));
 		controlServer.start(); // it will start in a new thread
 
-		VideoServer videoServer = new VideoServer(new InetSocketAddress(Config.getIntProperty("videoserverport")));
+		VideoServer videoServer = new VideoServer(new InetSocketAddress(Config.getPropertyAsInt("videoserverport")));
 		videoServer.start(); // it will start in a new thread
 	}
 
