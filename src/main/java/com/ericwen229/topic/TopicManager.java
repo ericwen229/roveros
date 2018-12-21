@@ -238,6 +238,9 @@ public class TopicManager {
 
 		publisherFuture.cancel(true);
 		subscriberFuture.cancel(true);
+
+		executor.shutdown();
+		NodeManager.shutdown();
 	}
 
 }

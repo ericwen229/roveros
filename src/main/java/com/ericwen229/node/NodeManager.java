@@ -36,4 +36,9 @@ public class NodeManager {
 		defaultNodeExecutor.shutdownNodeMain(node);
 	}
 
+	public static void shutdown() {
+		defaultNodeExecutor.shutdown();
+		defaultNodeExecutor.getScheduledExecutorService().shutdown();
+	}
+
 }
