@@ -24,10 +24,10 @@ public class VideoServer extends WebSocketServer {
 
 	public VideoServer(@NonNull InetSocketAddress address) {
 		super(address);
-		TopicManager.subscribeToTopic(
+		/*TopicManager.subscribeToTopic(
 				GraphName.of("/camera/rgb/image_raw"),
 				sensor_msgs.Image.class,
-				this::imageMessageHandler);
+				this::imageMessageHandler);*/
 	}
 
 	// ========== overridden methods ==========

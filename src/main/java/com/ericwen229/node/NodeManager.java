@@ -32,4 +32,8 @@ public class NodeManager {
 		defaultNodeExecutor.execute(node, getNodeConfiguration());
 	}
 
+	public static void shutdownNode(@NonNull NodeMain node) {
+		defaultNodeExecutor.shutdownNodeMain(node);
+	}
+
 }

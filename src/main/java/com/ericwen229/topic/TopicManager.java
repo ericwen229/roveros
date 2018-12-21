@@ -3,8 +3,8 @@ package com.ericwen229.topic;
 import com.ericwen229.node.NodeManager;
 import com.ericwen229.util.Config;
 import lombok.NonNull;
-import org.ros.exception.RosMessageRuntimeException;
 import org.ros.internal.message.Message;
+import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
@@ -12,8 +12,13 @@ import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 public class TopicManager {
@@ -36,47 +41,55 @@ public class TopicManager {
 		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
 
 		return new PublisherHandler<T>() {
+
+			// ========== members ==========
+
+			private final NodeMain node = new NodeMain() {
+				@Override
+				public GraphName getDefaultNodeName() {
+					// TODO: internal name management
+					return GraphName.of(String.format("/roveros/publish%s", topicName));
+				}
+
+				@Override
+				public void onStart(ConnectedNode connectedNode) {
+					publisher = connectedNode.newPublisher(topicName, topicTypeStr);
+				}
+
+				@Override
+				public void onShutdown(Node node) {
+					publisher = null;
+				}
+
+				@Override
+				public void onShutdownComplete(Node node) {
+				}
+
+				@Override
+				public void onError(Node node, Throwable throwable) {
+					// TODO: error handling
+					node.shutdown();
+				}
+			};
+
 			// IMPORTANT: volatile is necessary here
 			// otherwise the handler can't know publisher is ready
 			private volatile Publisher<T> publisher = null;
 
-			{ // constructor code
-				NodeManager.executeNode(new NodeMain() {
-					@Override
-					public GraphName getDefaultNodeName() {
-						// TODO: internal name management
-						return GraphName.of("foo");
-					}
+			// ========== constructor ==========
 
-					@Override
-					public void onStart(ConnectedNode connectedNode) {
-						try {
-							publisher = connectedNode.newPublisher(topicName, topicTypeStr);
-						}
-						catch (RosMessageRuntimeException e) {
-							// TODO: exception handling
-						}
-					}
-
-					@Override
-					public void onShutdown(Node node) {
-						publisher.shutdown();
-						publisher = null;
-					}
-
-					@Override
-					public void onShutdownComplete(Node node) {
-					}
-
-					@Override
-					public void onError(Node node, Throwable throwable) {
-						// TODO: error handling
-					}
-				});
+			{
+				NodeManager.executeNode(node);
 			}
+
+			// ========== methods ==========
 
 			@Override
 			public void publish(@NonNull T message) {
+				if (!isReady()) {
+					// TODO: exception handling
+					throw new RuntimeException();
+				}
 				publisher.publish(message);
 			}
 
@@ -91,48 +104,81 @@ public class TopicManager {
 			}
 
 			@Override
-			public String getTopicTypeStr() {
-				return topicTypeStr;
+			public void close() {
+				NodeManager.shutdownNode(node);
 			}
+
 		};
 	}
 
-	public static <T extends Message> void subscribeToTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType, @NonNull SubscriberHandler<T> subscriberHandler) {
+	public static <T extends Message> SubscriberHandler<T> subscribeToTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
 
-		NodeManager.executeNode(new NodeMain() {
-			@Override
-			public GraphName getDefaultNodeName() {
-				// TODO: name management
-				return GraphName.of("bar");
-			}
+		return new SubscriberHandler<T>() {
 
-			@Override
-			public void onStart(ConnectedNode connectedNode) {
-				try {
+			// ========== members ==========
+
+			private MessageListener<T> messageConsumer = this::accept;
+
+			private NodeMain node = new NodeMain() {
+				@Override
+				public GraphName getDefaultNodeName() {
+					// TODO: name management
+					return GraphName.of(String.format("/roveros/subscribe%s", topicName));
+				}
+
+				@Override
+				public void onStart(ConnectedNode connectedNode) {
 					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicTypeStr);
-					subscriber.addMessageListener(subscriberHandler::accept);
+					subscriber.addMessageListener(messageConsumer);
 				}
-				catch (RosMessageRuntimeException e) {
-					// TODO: exception handling
+
+				@Override
+				public void onShutdown(Node node) {
+				}
+
+				@Override
+				public void onShutdownComplete(Node node) {
+				}
+
+				@Override
+				public void onError(Node node, Throwable throwable) {
+					// TODO: error handling
+					node.shutdown();
+				}
+			};
+
+			private final List<Consumer<T>> subscribers = Collections.synchronizedList(new ArrayList<>());
+
+			// ========== constructor ==========
+
+			{
+				NodeManager.executeNode(node);
+			}
+
+			// ========== methods ==========
+
+			private void accept(@NonNull T message) {
+				for (Consumer<T> c: subscribers) {
+					c.accept(message);
 				}
 			}
 
 			@Override
-			public void onShutdown(Node node) {
-				logger.info(String.format("Subscription node %s shutting down: %s", node.getName(), node.getUri()));
+			public void subscribe(@NonNull Consumer<T> consumer) {
+				subscribers.add(consumer);
 			}
 
 			@Override
-			public void onShutdownComplete(Node node) {
+			public void unsubscribe(@NonNull Consumer<T> consumer) {
+				subscribers.remove(consumer);
 			}
 
 			@Override
-			public void onError(Node node, Throwable throwable) {
-				// TODO: error handling
-				node.shutdown();
+			public void close() {
+				NodeManager.shutdownNode(node);
 			}
-		});
+		};
 	}
 
 	// ========== sample program ==========
@@ -145,7 +191,7 @@ public class TopicManager {
 		ExecutorService executor = Executors.newCachedThreadPool();
 
 		// publisher
-		executor.execute(() -> {
+		Future<Void> publisherFuture = executor.submit(() -> {
 			// create handler
 			PublisherHandler<std_msgs.String> handler = publishOnTopic(GraphName.of("/foo"), std_msgs.String.class);
 
@@ -154,25 +200,44 @@ public class TopicManager {
 
 			// prepare and publish message
 			std_msgs.String msg = handler.newMessage();
-			for (int i = 0; i < 1000; i++) {
-				msg.setData(String.format("hello #%d", i));
+			int i = 0;
+			while (!Thread.currentThread().isInterrupted()) {
+				msg.setData(String.format("hello #%d", i++));
 				System.out.println(String.format("sent %s", msg.getData()));
 				handler.publish(msg);
 				try {
 					Thread.sleep(1000);
 				}
-				catch (InterruptedException e) {}
+				catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
 			}
+
+			handler.close();
+			return null;
 		});
 
 		// subscriber
-		executor.execute(() -> {
+		Future<Void> subscriberFuture = executor.submit(() -> {
 			// create handler
-			SubscriberHandler<std_msgs.String> handler = msg -> System.out.println(String.format("received %s", msg.getData()));
+			SubscriberHandler<std_msgs.String> handler = subscribeToTopic(GraphName.of("/foo"), std_msgs.String.class);
 
 			// subscribe
-			subscribeToTopic(GraphName.of("/foo"), std_msgs.String.class, handler);
+			handler.subscribe(msg -> System.out.println(String.format("received %s", msg.getData())));
+
+			while (!Thread.currentThread().isInterrupted());
+
+			handler.close();
+			return null;
 		});
+
+		try {
+			Thread.sleep(5000);
+		}
+		catch (InterruptedException e) {}
+
+		publisherFuture.cancel(true);
+		subscriberFuture.cancel(true);
 	}
 
 }
