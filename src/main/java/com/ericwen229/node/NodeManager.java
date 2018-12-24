@@ -72,6 +72,7 @@ public class NodeManager {
 	 * Shutdown all nodes and thread pool. This should only be invoked on program termination.
 	 */
 	public static void shutdown() {
+		// TODO: this method should be invoked for a graceful exit
 		defaultNodeExecutor.shutdown(); // shutdown all nodes
 		defaultNodeExecutor.getScheduledExecutorService().shutdown(); // shutdown thread pool
 	}

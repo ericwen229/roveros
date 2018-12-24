@@ -58,7 +58,6 @@ public class TopicManager {
 			private final NodeMain node = new NodeMain() {
 				@Override
 				public GraphName getDefaultNodeName() {
-					// TODO: name management
 					return GraphName.of(String.format("/roveros/publish%s", topicName));
 				}
 
@@ -71,16 +70,16 @@ public class TopicManager {
 
 				@Override
 				public void onShutdown(Node node) {
+					logger.info(String.format("Publisher node %s at %s shutting down", node.getName(), node.getUri()));
 					publisher = null; // it will be shutdown automatically, just remove reference to it
 				}
 
 				@Override
-				public void onShutdownComplete(Node node) {
-				}
+				public void onShutdownComplete(Node node) {}
 
 				@Override
 				public void onError(Node node, Throwable throwable) {
-					// TODO: exception handling
+					logger.severe(String.format("Publisher node %s at %s error: %s", node.getName(), node.getUri(), throwable));
 					node.shutdown();
 				}
 			};
@@ -96,14 +95,16 @@ public class TopicManager {
 			@Override
 			public void publish(@NonNull T message) {
 				if (!isReady()) {
-					// TODO: exception handling
-					throw new RuntimeException();
+					throw new RuntimeException("Publisher not ready");
 				}
 				publisher.publish(message);
 			}
 
 			@Override
 			public T newMessage() {
+				if (!isReady()) {
+					throw new RuntimeException("Publisher not ready");
+				}
 				return publisher.newMessage();
 			}
 
@@ -141,7 +142,6 @@ public class TopicManager {
 			private NodeMain node = new NodeMain() {
 				@Override
 				public GraphName getDefaultNodeName() {
-					// TODO: name management
 					return GraphName.of(String.format("/roveros/subscribe%s", topicName));
 				}
 
@@ -153,15 +153,15 @@ public class TopicManager {
 
 				@Override
 				public void onShutdown(Node node) {
+					logger.info(String.format("Subscriber node %s at %s shutting down", node.getName(), node.getUri()));
 				}
 
 				@Override
-				public void onShutdownComplete(Node node) {
-				}
+				public void onShutdownComplete(Node node) {}
 
 				@Override
 				public void onError(Node node, Throwable throwable) {
-					// TODO: error handling
+					logger.severe(String.format("Subscriber node %s at %s error: %s", node.getName(), node.getUri(), throwable));
 					node.shutdown();
 				}
 			};
@@ -220,83 +220,6 @@ public class TopicManager {
 		catch (IllegalAccessException e) {
 			throw new RuntimeException(String.format("Incorrect topic type %s: can't access field _TYPE", topicType.getName()));
 		}
-	}
-
-
-
-	// ========== a sample talker-listener program ==========
-	// TODO: move it somewhere else
-
-	public static void main(String[] args) {
-		// load config
-		Config.loadConfig(args[0]);
-
-		// create thread pool
-		ExecutorService executor = Executors.newCachedThreadPool();
-
-		// publisher
-		Future<Void> publisherFuture = executor.submit(() -> {
-			// create handler
-			PublisherHandler<std_msgs.String> handler = publishOnTopic(GraphName.of("/foo"), std_msgs.String.class);
-
-			// wait for handler to get ready
-			while (!handler.isReady()) {}
-
-			// keep firing new messages
-			std_msgs.String msg = handler.newMessage();
-			int i = 0;
-			while (!Thread.currentThread().isInterrupted()) {
-				// publish a new message
-				msg.setData(String.format("hello #%d", i++));
-				System.out.println(String.format("sent %s", msg.getData()));
-				handler.publish(msg);
-
-				try {
-					// wait a second
-					Thread.sleep(500);
-				}
-				catch (InterruptedException e) {
-					// time to stop
-					Thread.currentThread().interrupt();
-				}
-			}
-
-			// close handler
-			handler.close();
-			return null;
-		});
-
-		// subscriber
-		Future<Void> subscriberFuture = executor.submit(() -> {
-			// create handler
-			SubscriberHandler<std_msgs.String> handler = subscribeToTopic(GraphName.of("/foo"), std_msgs.String.class);
-
-			// subscribe
-			handler.subscribe(msg -> System.out.println(String.format("received %s", msg.getData())));
-
-			// wait for interrupt
-			while (!Thread.currentThread().isInterrupted()) {}
-
-			// close handler
-			handler.close();
-			return null;
-		});
-
-		try {
-			// do something for a period of time
-			Thread.sleep(5000);
-		}
-		catch (InterruptedException e) {
-			System.out.println("What? Now I don't even get to sleep for a minute, huh?");
-		}
-
-		// time to stop
-		publisherFuture.cancel(true);
-		subscriberFuture.cancel(true);
-
-		// shutdown thread pools (otherwise the program doesn't stop)
-		executor.shutdown();
-		NodeManager.shutdown();
 	}
 
 }
