@@ -1,7 +1,6 @@
 package com.ericwen229.topic;
 
 import com.ericwen229.node.NodeManager;
-import com.ericwen229.util.Config;
 import com.ericwen229.util.Name;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
@@ -15,6 +14,7 @@ import org.ros.node.topic.Subscriber;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
@@ -31,6 +31,10 @@ public class TopicManager {
 	 */
 	private static final Logger logger = Logger.getLogger(TopicManager.class.getName());
 
+	private static final HashMap<GraphName, PublisherHandler> topicNameToPublisherHandler = new HashMap<>();
+
+	private static final HashMap<GraphName, SubscriberHandler> topicNameToSubscriberHandler = new HashMap<>();
+
 
 
 	// ========== static methods ==========
@@ -43,86 +47,110 @@ public class TopicManager {
 	 * @param <T> topic type
 	 * @return created publisher handler
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
-		return new PublisherHandler<T>() {
+		PublisherHandler handler = topicNameToPublisherHandler.getOrDefault(topicName, null);
 
-			// ========== members ==========
+		if (handler == null) {
+			// create a new handler
+			handler = new PublisherHandler<T>() {
 
-			// IMPORTANT: volatile is necessary here
-			// it will be set in a different thread (in which onStart is invoked)
-			private volatile Publisher<T> publisher = null;
+				// ========== members ==========
 
-			private final NodeMain node = new NodeMain() {
+				// IMPORTANT: volatile is necessary here
+				// it will be set in a different thread (in which onStart is invoked)
+				private volatile Publisher<T> publisher = null;
+
+				private final NodeMain node = new NodeMain() {
+					@Override
+					public GraphName getDefaultNodeName() {
+						return Name.getPublisherNodeName(topicName);
+					}
+
+					@Override
+					public void onStart(ConnectedNode connectedNode) {
+						// create publisher
+						// (publisher handler is going to use it)
+						publisher = connectedNode.newPublisher(topicName, topicTypeStr);
+					}
+
+					@Override
+					public void onShutdown(Node node) {
+						logger.info(String.format("Publisher node %s at %s shutting down", node.getName(), node.getUri()));
+						publisher = null; // it will be shutdown automatically, just remove reference to it
+					}
+
+					@Override
+					public void onShutdownComplete(Node node) {
+					}
+
+					@Override
+					public void onError(Node node, Throwable throwable) {
+						logger.severe(String.format("Publisher node %s at %s error: %s", node.getName(), node.getUri(), throwable));
+						// node will shutdown after returning
+					}
+				};
+
+				// ========== constructor ==========
+
+				{
+					NodeManager.executeNode(node);
+				}
+
+				// ========== methods ==========
+
 				@Override
-				public GraphName getDefaultNodeName() {
-					return Name.getPublisherNodeName(topicName);
+				public void publish(@NonNull T message) {
+					if (!isReady()) {
+						throw new RuntimeException("Publisher not ready");
+					}
+					publisher.publish(message);
 				}
 
 				@Override
-				public void onStart(ConnectedNode connectedNode) {
-					// create publisher
-					// (publisher handler is going to use it)
-					publisher = connectedNode.newPublisher(topicName, topicTypeStr);
+				public T newMessage() {
+					if (!isReady()) {
+						throw new RuntimeException("Publisher not ready");
+					}
+					return publisher.newMessage();
 				}
 
 				@Override
-				public void onShutdown(Node node) {
-					logger.info(String.format("Publisher node %s at %s shutting down", node.getName(), node.getUri()));
-					publisher = null; // it will be shutdown automatically, just remove reference to it
+				public boolean isReady() {
+					return publisher != null;
 				}
 
 				@Override
-				public void onShutdownComplete(Node node) {
+				public void close() {
+					NodeManager.shutdownNode(node);
 				}
 
 				@Override
-				public void onError(Node node, Throwable throwable) {
-					logger.severe(String.format("Publisher node %s at %s error: %s", node.getName(), node.getUri(), throwable));
-					// node will shutdown after returning
+				public String getTopicTypeStr() {
+					return topicTypeStr;
 				}
+
 			};
 
-			// ========== constructor ==========
-
-			{
-				NodeManager.executeNode(node);
+			topicNameToPublisherHandler.put(topicName, handler);
+			return (PublisherHandler<T>) handler;
+		}
+		else {
+			// there is a handler already
+			// same class?
+			if (handler.getTopicTypeStr().equals(topicTypeStr)) {
+				// okay
+				// just return it
+				return (PublisherHandler<T>) handler;
 			}
-
-			// ========== methods ==========
-
-			@Override
-			public void publish(@NonNull T message) {
-				if (!isReady()) {
-					throw new RuntimeException("Publisher not ready");
-				}
-				publisher.publish(message);
+			else {
+				// error
+				throw new IllegalArgumentException(
+						String.format("Trying to publish on topic %s again with a different topic type\nOld type: %s\nNew type: %s",
+								topicName, handler.getTopicTypeStr(), topicTypeStr));
 			}
-
-			@Override
-			public T newMessage() {
-				if (!isReady()) {
-					throw new RuntimeException("Publisher not ready");
-				}
-				return publisher.newMessage();
-			}
-
-			@Override
-			public boolean isReady() {
-				return publisher != null;
-			}
-
-			@Override
-			public void close() {
-				NodeManager.shutdownNode(node);
-			}
-
-			@Override
-			public Class<T> getTopicType() {
-				return topicType;
-			}
-
-		};
+		}
 	}
 
 	/**
@@ -134,76 +162,99 @@ public class TopicManager {
 	 * @param <T> topic type
 	 * @return created subscriber handler
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T extends Message> SubscriberHandler<T> subscribeToTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
-		return new SubscriberHandler<T>() {
+		SubscriberHandler handler = topicNameToSubscriberHandler.getOrDefault(topicName, null);
 
-			// ========== members ==========
+		if (handler == null) {
+			handler = new SubscriberHandler<T>() {
 
-			private MessageListener<T> messageConsumer = this::accept;
-			private final List<Consumer<T>> subscribers = Collections.synchronizedList(new ArrayList<>());
+				// ========== members ==========
 
-			private NodeMain node = new NodeMain() {
-				@Override
-				public GraphName getDefaultNodeName() {
-					return Name.getSubscriberNodeName(topicName);
+				private MessageListener<T> messageConsumer = this::accept;
+				private final List<Consumer<T>> subscribers = Collections.synchronizedList(new ArrayList<>());
+
+				private NodeMain node = new NodeMain() {
+					@Override
+					public GraphName getDefaultNodeName() {
+						return Name.getSubscriberNodeName(topicName);
+					}
+
+					@Override
+					public void onStart(ConnectedNode connectedNode) {
+						Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicTypeStr);
+						subscriber.addMessageListener(messageConsumer);
+					}
+
+					@Override
+					public void onShutdown(Node node) {
+						logger.info(String.format("Subscriber node %s at %s shutting down", node.getName(), node.getUri()));
+					}
+
+					@Override
+					public void onShutdownComplete(Node node) {}
+
+					@Override
+					public void onError(Node node, Throwable throwable) {
+						logger.severe(String.format("Subscriber node %s at %s error: %s", node.getName(), node.getUri(), throwable));
+						// node will shutdown after returning
+					}
+				};
+
+				// ========== constructor ==========
+
+				{
+					NodeManager.executeNode(node);
+				}
+
+				// ========== methods ==========
+
+				private void accept(@NonNull T message) {
+					for (Consumer<T> c: subscribers) {
+						c.accept(message);
+					}
 				}
 
 				@Override
-				public void onStart(ConnectedNode connectedNode) {
-					Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicTypeStr);
-					subscriber.addMessageListener(messageConsumer);
+				public void subscribe(@NonNull Consumer<T> consumer) {
+					subscribers.add(consumer);
 				}
 
 				@Override
-				public void onShutdown(Node node) {
-					logger.info(String.format("Subscriber node %s at %s shutting down", node.getName(), node.getUri()));
+				public void unsubscribe(@NonNull Consumer<T> consumer) {
+					subscribers.remove(consumer);
 				}
 
 				@Override
-				public void onShutdownComplete(Node node) {}
+				public void close() {
+					NodeManager.shutdownNode(node);
+				}
 
 				@Override
-				public void onError(Node node, Throwable throwable) {
-					logger.severe(String.format("Subscriber node %s at %s error: %s", node.getName(), node.getUri(), throwable));
-					// node will shutdown after returning
+				public String getTopicTypeStr() {
+					return topicTypeStr;
 				}
 			};
 
-			// ========== constructor ==========
-
-			{
-				NodeManager.executeNode(node);
+			topicNameToSubscriberHandler.put(topicName, handler);
+			return (SubscriberHandler<T>) handler;
+		}
+		else {
+			// there is a handler already
+			// same class?
+			if (handler.getTopicTypeStr().equals(topicTypeStr)) {
+				// okay
+				// just return it
+				return (SubscriberHandler<T>) handler;
 			}
-
-			// ========== methods ==========
-
-			private void accept(@NonNull T message) {
-				for (Consumer<T> c: subscribers) {
-					c.accept(message);
-				}
+			else {
+				// error
+				throw new IllegalArgumentException(
+						String.format("Trying to publish on topic %s again with a different topic type\nOld type: %s\nNew type: %s",
+								topicName, handler.getTopicTypeStr(), topicTypeStr));
 			}
-
-			@Override
-			public void subscribe(@NonNull Consumer<T> consumer) {
-				subscribers.add(consumer);
-			}
-
-			@Override
-			public void unsubscribe(@NonNull Consumer<T> consumer) {
-				subscribers.remove(consumer);
-			}
-
-			@Override
-			public void close() {
-				NodeManager.shutdownNode(node);
-			}
-
-			@Override
-			public Class<T> getTopicType() {
-				return topicType;
-			}
-		};
+		}
 	}
 
 

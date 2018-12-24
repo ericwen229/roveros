@@ -23,7 +23,7 @@ public class Listener {
 
 		// sleep then shutdown
 		try {
-			Thread.sleep(2000);
+			Thread.sleep(10000);
 		}
 		catch (InterruptedException e) {}
 		NodeManager.shutdown();

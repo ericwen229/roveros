@@ -31,10 +31,10 @@ public interface SubscriberHandler<T extends Message> {
 	void close();
 
 	/**
-	 * Get runtime type of topic.
+	 * Get type string of topic.
 	 *
-	 * @return type of topic
+	 * @return type string of topic
 	 */
-	Class<T> getTopicType();
+	String getTopicTypeStr();
 
 }
