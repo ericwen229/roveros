@@ -16,9 +16,6 @@ import org.ros.node.topic.Subscriber;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -120,6 +117,11 @@ public class TopicManager {
 				NodeManager.shutdownNode(node);
 			}
 
+			@Override
+			public Class<T> getTopicType() {
+				return topicType;
+			}
+
 		};
 	}
 
@@ -195,6 +197,11 @@ public class TopicManager {
 			@Override
 			public void close() {
 				NodeManager.shutdownNode(node);
+			}
+
+			@Override
+			public Class<T> getTopicType() {
+				return topicType;
 			}
 		};
 	}

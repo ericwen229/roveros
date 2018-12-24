@@ -30,4 +30,11 @@ public interface SubscriberHandler<T extends Message> {
 	 */
 	void close();
 
+	/**
+	 * Get runtime type of topic.
+	 *
+	 * @return type of topic
+	 */
+	Class<T> getTopicType();
+
 }
