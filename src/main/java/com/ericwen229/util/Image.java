@@ -34,7 +34,7 @@ public class Image {
 		for (int i = 0; i < imageWidth; i++) {
 			for (int j = 0; j < imageHeight; j++) {
 				int index = (imageWidth * j + i) * 3 + arrayOffset;
-				outputImage.setRGB(i, j, rgbfromBGR(dataArray[index], dataArray[index + 1], dataArray[index + 2]));
+				outputImage.setRGB(i, j, rgbFromRGB(dataArray[index + 2], dataArray[index + 1], dataArray[index]));
 			}
 		}
 
@@ -49,7 +49,7 @@ public class Image {
 	 * @param r red component value
 	 * @return RGB value
 	 */
-	public static int rgbfromBGR(byte b, byte g, byte r) {
+	public static int rgbFromRGB(byte r, byte g, byte b) {
 		int color = 0;
 
 		color |= 0x00ff0000 & ((int) r << 16);
