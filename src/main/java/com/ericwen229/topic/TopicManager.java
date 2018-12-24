@@ -2,6 +2,7 @@ package com.ericwen229.topic;
 
 import com.ericwen229.node.NodeManager;
 import com.ericwen229.util.Config;
+import com.ericwen229.util.Name;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
 import org.ros.message.MessageListener;
@@ -58,7 +59,7 @@ public class TopicManager {
 			private final NodeMain node = new NodeMain() {
 				@Override
 				public GraphName getDefaultNodeName() {
-					return GraphName.of(String.format("/roveros/publish%s", topicName));
+					return Name.getPublisherNodeName(topicName);
 				}
 
 				@Override
@@ -75,12 +76,13 @@ public class TopicManager {
 				}
 
 				@Override
-				public void onShutdownComplete(Node node) {}
+				public void onShutdownComplete(Node node) {
+				}
 
 				@Override
 				public void onError(Node node, Throwable throwable) {
 					logger.severe(String.format("Publisher node %s at %s error: %s", node.getName(), node.getUri(), throwable));
-					node.shutdown();
+					// node will shutdown after returning
 				}
 			};
 
@@ -142,7 +144,7 @@ public class TopicManager {
 			private NodeMain node = new NodeMain() {
 				@Override
 				public GraphName getDefaultNodeName() {
-					return GraphName.of(String.format("/roveros/subscribe%s", topicName));
+					return Name.getSubscriberNodeName(topicName);
 				}
 
 				@Override
@@ -162,7 +164,7 @@ public class TopicManager {
 				@Override
 				public void onError(Node node, Throwable throwable) {
 					logger.severe(String.format("Subscriber node %s at %s error: %s", node.getName(), node.getUri(), throwable));
-					node.shutdown();
+					// node will shutdown after returning
 				}
 			};
 

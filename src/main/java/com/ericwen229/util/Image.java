@@ -44,9 +44,9 @@ public class Image {
 	/**
 	 * Create RGB value from given BGR component values
 	 *
-	 * @param b blue component value
-	 * @param g green component value
 	 * @param r red component value
+	 * @param g green component value
+	 * @param b blue component value
 	 * @return RGB value
 	 */
 	public static int rgbFromRGB(byte r, byte g, byte b) {

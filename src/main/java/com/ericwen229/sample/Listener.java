@@ -1,5 +1,6 @@
 package com.ericwen229.sample;
 
+import com.ericwen229.node.NodeManager;
 import com.ericwen229.topic.SubscriberHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Config;
@@ -19,6 +20,13 @@ public class Listener {
 
 		// subscribe
 		handler.subscribe(msg -> System.out.println(String.format("received %s", msg.getData())));
+
+		// sleep then shutdown
+		try {
+			Thread.sleep(2000);
+		}
+		catch (InterruptedException e) {}
+		NodeManager.shutdown();
 	}
 
 }

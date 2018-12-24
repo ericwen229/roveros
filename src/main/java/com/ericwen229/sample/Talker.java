@@ -1,5 +1,6 @@
 package com.ericwen229.sample;
 
+import com.ericwen229.node.NodeManager;
 import com.ericwen229.topic.PublisherHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Config;
@@ -22,7 +23,7 @@ public class Talker {
 
 		// keep firing new messages
 		std_msgs.String msg = handler.newMessage();
-		for (int i = 0; true; i++) {
+		for (int i = 0; i < 20; i++) {
 			// publish a new message
 			msg.setData(String.format("hello #%d", i));
 			System.out.println(String.format("sent %s", msg.getData()));
@@ -34,6 +35,9 @@ public class Talker {
 			}
 			catch (InterruptedException e) {}
 		}
+
+		// shutdown
+		NodeManager.shutdown();
 	}
 
 }
