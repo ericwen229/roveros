@@ -71,7 +71,7 @@ public class ControlServer extends WebSocketServer {
 		private final Thread msgPublishThread;
 
 		private ControlMsgPublisher(final long intervalMillis) {
-			final PublisherHandler<geometry_msgs.Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
+			final PublisherHandler<geometry_msgs.Twist> handler = TopicManager.createPublisherHandler(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
 			msgPublishThread = new Thread(new Runnable() {
 				public void run() {
 					while (!Thread.currentThread().isInterrupted()) {
@@ -81,12 +81,10 @@ public class ControlServer extends WebSocketServer {
 							angularValue = angular * angularScale;
 						}
 
-						if (handler.isReady()) {
-							geometry_msgs.Twist msg = handler.newMessage();
-							msg.getLinear().setX(linearValue);
-							msg.getAngular().setZ(angularValue);
-							handler.publish(msg);
-						}
+						geometry_msgs.Twist msg = handler.newMessage();
+						msg.getLinear().setX(linearValue);
+						msg.getAngular().setZ(angularValue);
+						handler.publish(msg);
 
 						try {
 							Thread.sleep(intervalMillis);

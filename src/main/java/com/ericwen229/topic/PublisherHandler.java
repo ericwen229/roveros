@@ -1,5 +1,7 @@
 package com.ericwen229.topic;
 
+import com.ericwen229.node.PublisherNode;
+import lombok.NonNull;
 import org.ros.internal.message.Message;
 
 /**
@@ -7,40 +9,37 @@ import org.ros.internal.message.Message;
  *
  * @param <T> topic type
  */
-public interface PublisherHandler<T extends Message> {
+public class PublisherHandler<T extends Message> {
+
+	private final PublisherNode<T> publisherNode;
+
+	public PublisherHandler(@NonNull PublisherNode publisherNode) {
+		this.publisherNode = publisherNode;
+	}
 
 	/**
 	 * Publish a message.
 	 *
 	 * @param message message to publish
 	 */
-	void publish(T message);
+	public void publish(@NonNull T message) {
+		publisherNode.publish(message);
+	}
 
 	/**
 	 * Create a new message instance.
 	 *
 	 * @return newly created message instance
 	 */
-	T newMessage();
-
-	/**
-	 * True if ready for publish
-	 * (node's been created, connected to master and publisher's been created).
-	 *
-	 * @return true if ready for publish
-	 */
-	boolean isReady();
+	public T newMessage() {
+		return publisherNode.newMessage();
+	}
 
 	/**
 	 * Close the handler along with all its resources (node, publisher, etc).
 	 */
-	void close();
-
-	/**
-	 * Get type string of topic.
-	 *
-	 * @return type string of topic
-	 */
-	String getTopicTypeStr();
+	public void close() {
+		publisherNode.returnHandler(this);
+	}
 
 }

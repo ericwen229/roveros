@@ -1,6 +1,7 @@
 package com.ericwen229.topic;
 
 import com.ericwen229.node.NodeManager;
+import com.ericwen229.node.PublisherNode;
 import com.ericwen229.util.Name;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
@@ -9,7 +10,6 @@ import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
 import org.ros.node.NodeMain;
-import org.ros.node.topic.Publisher;
 import org.ros.node.topic.Subscriber;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class TopicManager {
 	 */
 	private static final Logger logger = Logger.getLogger(TopicManager.class.getName());
 
-	private static final HashMap<GraphName, PublisherHandler> topicNameToPublisherHandler = new HashMap<>();
+	private static final HashMap<GraphName, PublisherNode> topicNameToPublisherNode = new HashMap<>();
 
 	private static final HashMap<GraphName, SubscriberHandler> topicNameToSubscriberHandler = new HashMap<>();
 
@@ -48,109 +48,30 @@ public class TopicManager {
 	 * @return created publisher handler
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Message> PublisherHandler<T> publishOnTopic(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+	public static <T extends Message> PublisherHandler<T> createPublisherHandler(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		String topicTypeStr = getTopicTypeStrFromTopicType(topicType);
-		PublisherHandler handler = topicNameToPublisherHandler.getOrDefault(topicName, null);
+		PublisherNode publisherNode = topicNameToPublisherNode.getOrDefault(topicName, null);
 
-		if (handler == null) {
-			// create a new handler
-			handler = new PublisherHandler<T>() {
-
-				// ========== members ==========
-
-				// IMPORTANT: volatile is necessary here
-				// it will be set in a different thread (in which onStart is invoked)
-				private volatile Publisher<T> publisher = null;
-
-				private final NodeMain node = new NodeMain() {
-					@Override
-					public GraphName getDefaultNodeName() {
-						return Name.getPublisherNodeName(topicName);
-					}
-
-					@Override
-					public void onStart(ConnectedNode connectedNode) {
-						// create publisher
-						// (publisher handler is going to use it)
-						publisher = connectedNode.newPublisher(topicName, topicTypeStr);
-					}
-
-					@Override
-					public void onShutdown(Node node) {
-						logger.info(String.format("Publisher node %s at %s shutting down", node.getName(), node.getUri()));
-						publisher = null; // it will be shutdown automatically, just remove reference to it
-					}
-
-					@Override
-					public void onShutdownComplete(Node node) {
-					}
-
-					@Override
-					public void onError(Node node, Throwable throwable) {
-						logger.severe(String.format("Publisher node %s at %s error: %s", node.getName(), node.getUri(), throwable));
-						// node will shutdown after returning
-					}
-				};
-
-				// ========== constructor ==========
-
-				{
-					NodeManager.executeNode(node);
-				}
-
-				// ========== methods ==========
-
-				@Override
-				public void publish(@NonNull T message) {
-					if (!isReady()) {
-						throw new RuntimeException("Publisher not ready");
-					}
-					publisher.publish(message);
-				}
-
-				@Override
-				public T newMessage() {
-					if (!isReady()) {
-						throw new RuntimeException("Publisher not ready");
-					}
-					return publisher.newMessage();
-				}
-
-				@Override
-				public boolean isReady() {
-					return publisher != null;
-				}
-
-				@Override
-				public void close() {
-					NodeManager.shutdownNode(node);
-				}
-
-				@Override
-				public String getTopicTypeStr() {
-					return topicTypeStr;
-				}
-
-			};
-
-			topicNameToPublisherHandler.put(topicName, handler);
-			return (PublisherHandler<T>) handler;
+		if (publisherNode == null) {
+			PublisherNode<T> newPublisherNode = new PublisherNode(topicName, topicType);
+			topicNameToPublisherNode.put(topicName, newPublisherNode);
+			return newPublisherNode.createHandler();
 		}
 		else {
-			// there is a handler already
-			// same class?
-			if (handler.getTopicTypeStr().equals(topicTypeStr)) {
-				// okay
-				// just return it
-				return (PublisherHandler<T>) handler;
+			if (publisherNode.getTopicTypeStr().equals(topicTypeStr)) {
+				// same topic && same type -> OK
+				return publisherNode.createHandler();
 			}
 			else {
-				// error
-				throw new IllegalArgumentException(
-						String.format("Trying to publish on topic %s again with a different topic type\nOld type: %s\nNew type: %s",
-								topicName, handler.getTopicTypeStr(), topicTypeStr));
+				// same topic && different type -> ERROR
+				// TODO: exception handling
+				throw new RuntimeException();
 			}
 		}
+	}
+
+	public static <T extends Message> void returnPublisherHandler(@NonNull PublisherHandler<T> handler) {
+
 	}
 
 	/**
@@ -268,7 +189,7 @@ public class TopicManager {
 	 * @param <T> topic type
 	 * @return type string of topic type
 	 */
-	private static <T extends Message> String getTopicTypeStrFromTopicType(Class<T> topicType) {
+	public static <T extends Message> String getTopicTypeStrFromTopicType(Class<T> topicType) {
 		try {
 			// get static field String _TYPE
 			// this field is in every interface of message type that extends base message type
