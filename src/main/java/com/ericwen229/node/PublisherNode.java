@@ -16,17 +16,22 @@ import java.util.logging.Logger;
 
 public class PublisherNode<T extends Message> implements NodeMain {
 
+	// ========== static members ==========
+
 	private static final Logger logger = Logger.getLogger(PublisherNode.class.getName());
 
-	private final GraphName topicName;
+	// ========== members ==========
+
+	@Getter private final GraphName topicName;
 	@Getter private final String topicTypeStr;
 	private volatile Publisher<T> publisher;
-	private Object publisherReady = new Object();
+	private final Object publisherReady;
 	private int handlerCount;
 
 	public PublisherNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		this.topicName = topicName;
 		topicTypeStr = TopicManager.getTopicTypeStrFromTopicType(topicType);
+		publisherReady = new Object();
 		handlerCount = 0;
 
 		NodeManager.executeNode(this);
@@ -35,7 +40,6 @@ public class PublisherNode<T extends Message> implements NodeMain {
 				publisherReady.wait();
 			}
 			catch (InterruptedException e) {
-				// TODO: exception handling
 				throw new RuntimeException();
 			}
 		}
@@ -58,7 +62,6 @@ public class PublisherNode<T extends Message> implements NodeMain {
 	@Override
 	public void onShutdown(Node node) {
 		logger.info(String.format("Publisher node shutting down: %s @ %s", node.getName(), node.getUri()));
-		publisher = null;
 	}
 
 	@Override
@@ -73,12 +76,10 @@ public class PublisherNode<T extends Message> implements NodeMain {
 	}
 
 	public void publish(@NonNull T message) {
-		// TODO: exception handling
 		publisher.publish(message);
 	}
 
 	public T newMessage() {
-		// TODO: exception handling
 		return publisher.newMessage();
 	}
 
@@ -89,7 +90,10 @@ public class PublisherNode<T extends Message> implements NodeMain {
 
 	public void returnHandler(@NonNull PublisherHandler<T> handler) {
 		-- handlerCount;
-		// TODO: handler check
+	}
+
+	public int getHandlerCount() {
+		return handlerCount;
 	}
 
 }

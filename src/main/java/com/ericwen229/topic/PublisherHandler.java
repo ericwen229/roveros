@@ -3,6 +3,7 @@ package com.ericwen229.topic;
 import com.ericwen229.node.PublisherNode;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
+import org.ros.namespace.GraphName;
 
 /**
  * A simple interface of message publishing.
@@ -40,6 +41,10 @@ public class PublisherHandler<T extends Message> {
 	 */
 	public void close() {
 		publisherNode.returnHandler(this);
+	}
+
+	public GraphName getTopicName() {
+		return publisherNode.getTopicName();
 	}
 
 }

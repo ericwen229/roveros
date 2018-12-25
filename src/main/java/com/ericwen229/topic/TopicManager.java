@@ -5,12 +5,14 @@ import com.ericwen229.node.PublisherNode;
 import com.ericwen229.util.Name;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
+import org.ros.internal.node.topic.PublisherIdentifier;
 import org.ros.message.MessageListener;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
 import org.ros.node.NodeMain;
 import org.ros.node.topic.Subscriber;
+import org.ros.node.topic.SubscriberListener;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -64,14 +66,20 @@ public class TopicManager {
 			}
 			else {
 				// same topic && different type -> ERROR
-				// TODO: exception handling
 				throw new RuntimeException();
 			}
 		}
 	}
 
 	public static <T extends Message> void returnPublisherHandler(@NonNull PublisherHandler<T> handler) {
-
+		handler.close();
+		GraphName topicName = handler.getTopicName();
+		// TODO: synchronization
+		PublisherNode publisherNode = topicNameToPublisherNode.get(topicName);
+		if (publisherNode.getHandlerCount() == 0) {
+			topicNameToPublisherNode.remove(topicName);
+			NodeManager.shutdownNode(publisherNode);
+		}
 	}
 
 	/**
@@ -97,6 +105,8 @@ public class TopicManager {
 				private final List<Consumer<T>> subscribers = Collections.synchronizedList(new ArrayList<>());
 
 				private NodeMain node = new NodeMain() {
+					private Subscriber<T> subscriber;
+
 					@Override
 					public GraphName getDefaultNodeName() {
 						return Name.getSubscriberNodeName(topicName);
@@ -104,7 +114,7 @@ public class TopicManager {
 
 					@Override
 					public void onStart(ConnectedNode connectedNode) {
-						Subscriber<T> subscriber = connectedNode.newSubscriber(topicName, topicTypeStr);
+						subscriber = connectedNode.newSubscriber(topicName, topicTypeStr);
 						subscriber.addMessageListener(messageConsumer);
 					}
 
@@ -177,10 +187,6 @@ public class TopicManager {
 			}
 		}
 	}
-
-
-
-	// ========== utils ==========
 
 	/**
 	 * Retrieve static member "String _TYPE" from the given class object.

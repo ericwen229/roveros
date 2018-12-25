@@ -1,6 +1,5 @@
 package com.ericwen229.sample;
 
-import com.ericwen229.node.NodeManager;
 import com.ericwen229.topic.PublisherHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Config;
@@ -16,12 +15,9 @@ public class Talker {
 		// create handler
 		PublisherHandler<std_msgs.String> handler = TopicManager.createPublisherHandler(GraphName.of("/foo"), std_msgs.String.class);
 
-		// add shutdown hook for ctrl-c exit
-		Runtime.getRuntime().addShutdownHook(new Thread(handler::close));
-
 		// keep firing new messages
 		std_msgs.String msg = handler.newMessage();
-		for (int i = 0; i < 20; i++) {
+		for (int i = 0; i < 100; i++) {
 			// publish a new message
 			msg.setData(String.format("hello #%d", i));
 			System.out.println(String.format("sent %s", msg.getData()));
@@ -35,7 +31,7 @@ public class Talker {
 		}
 
 		// shutdown
-		NodeManager.shutdown();
+		handler.close();
 	}
 
 }
