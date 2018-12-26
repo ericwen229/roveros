@@ -1,48 +1,32 @@
 package com.ericwen229.node;
 
-import com.ericwen229.topic.PublisherHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Name;
 import lombok.Getter;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
+import org.ros.internal.node.topic.SubscriberIdentifier;
 import org.ros.namespace.GraphName;
 import org.ros.node.ConnectedNode;
 import org.ros.node.Node;
 import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
+import org.ros.node.topic.PublisherListener;
 
 import java.util.logging.Logger;
 
-public class PublisherNode<T extends Message> implements NodeMain {
-
-	// ========== static members ==========
-
-	private static final Logger logger = Logger.getLogger(PublisherNode.class.getName());
-
-	// ========== members ==========
+class PublisherNode<T extends Message> implements NodeMain {
 
 	@Getter private final GraphName topicName;
-	@Getter private final String topicTypeStr;
-	private volatile Publisher<T> publisher;
-	private final Object publisherReady;
-	private int handlerCount;
+	@Getter private final Class<T> topicType;
+	private Publisher<T> publisher;
 
-	public PublisherNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+	private volatile boolean isPublisherReady = false;
+	private Object publisherReadyNotifier = new Object();
+
+	PublisherNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		this.topicName = topicName;
-		topicTypeStr = TopicManager.getTopicTypeStrFromTopicType(topicType);
-		publisherReady = new Object();
-		handlerCount = 0;
-
-		NodeManager.executeNode(this);
-		synchronized (publisherReady) {
-			try {
-				publisherReady.wait();
-			}
-			catch (InterruptedException e) {
-				throw new RuntimeException();
-			}
-		}
+		this.topicType = topicType;
 	}
 
 	@Override
@@ -52,48 +36,88 @@ public class PublisherNode<T extends Message> implements NodeMain {
 
 	@Override
 	public void onStart(ConnectedNode connectedNode) {
-		logger.info(String.format("Publisher node starting: %s @ %s", connectedNode.getName(), connectedNode.getUri()));
-		publisher = connectedNode.newPublisher(topicName, topicTypeStr);
-		synchronized (publisherReady) {
-			publisherReady.notify();
-		}
+		isPublisherReady = false;
+		Logger.getGlobal().info(
+				String.format(
+						"Publisher node %s at %s starting",
+						getDefaultNodeName(),
+						connectedNode.getUri()));
+
+		publisher = connectedNode.newPublisher(topicName, TopicManager.topicTypeObjectToTopicTypeStr(topicType));
+		publisher.addListener(new PublisherListener<T>() {
+			@Override public void onNewSubscriber(Publisher<T> publisher, SubscriberIdentifier subscriberIdentifier) {}
+			@Override public void onShutdown(Publisher<T> publisher) {}
+			@Override public void onMasterRegistrationSuccess(Publisher<T> tPublisher) {
+				isPublisherReady = true;
+				synchronized (publisherReadyNotifier) {
+					publisherReadyNotifier.notifyAll();
+				}
+			}
+			@Override public void onMasterRegistrationFailure(Publisher<T> tPublisher) {}
+			@Override public void onMasterUnregistrationSuccess(Publisher<T> tPublisher) {}
+			@Override public void onMasterUnregistrationFailure(Publisher<T> tPublisher) {}
+		});
 	}
 
 	@Override
 	public void onShutdown(Node node) {
-		logger.info(String.format("Publisher node shutting down: %s @ %s", node.getName(), node.getUri()));
+		isPublisherReady = false;
+		Logger.getGlobal().info(
+				String.format(
+						"Publisher node %s at %s shutting down",
+						getDefaultNodeName(),
+						node.getUri()));
 	}
 
 	@Override
 	public void onShutdownComplete(Node node) {
-		logger.info(String.format("Publisher node shutting down complete: %s @ %s", node.getName(), node.getUri()));
+		isPublisherReady = false;
 	}
 
 	@Override
 	public void onError(Node node, Throwable throwable) {
-		logger.severe(String.format("Publisher node %s at %s error: %s", node.getName(), node.getUri(), throwable));
-		// node will shut down after returning
+		isPublisherReady = false;
+		Logger.getGlobal().severe(
+				String.format(
+						"Publisher node %s at %s error: %s",
+						getDefaultNodeName(),
+						node.getUri(),
+						throwable));
 	}
 
-	public void publish(@NonNull T message) {
-		publisher.publish(message);
+	PublisherNodeHandler<T> createHandler() {
+		return new PublisherNodeHandler<>(this);
 	}
 
-	public T newMessage() {
+	boolean isReady() {
+		return isPublisherReady;
+	}
+
+	T newMessage() {
+		if (!isReady()) {
+			throw new RuntimeException("Publisher node not ready");
+		}
 		return publisher.newMessage();
 	}
 
-	public PublisherHandler<T> createHandler() {
-		++ handlerCount;
-		return new PublisherHandler<>(this);
+	void publish(@NonNull T message) {
+		if (!isReady()) {
+			throw new RuntimeException("Publisher node not ready");
+		}
+		publisher.publish(message);
 	}
 
-	public void returnHandler(@NonNull PublisherHandler<T> handler) {
-		-- handlerCount;
-	}
-
-	public int getHandlerCount() {
-		return handlerCount;
+	void blockUntilReady() {
+		synchronized (publisherReadyNotifier) {
+			if (!isReady()) {
+				try {
+					publisherReadyNotifier.wait();
+				}
+				catch (InterruptedException e) {
+					throw new RuntimeException("Unexpected interruption");
+				}
+			}
+		}
 	}
 
 }

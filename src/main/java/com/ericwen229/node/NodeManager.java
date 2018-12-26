@@ -2,79 +2,98 @@ package com.ericwen229.node;
 
 import com.ericwen229.util.Config;
 import lombok.NonNull;
+import org.ros.internal.message.Message;
+import org.ros.namespace.GraphName;
 import org.ros.node.DefaultNodeMainExecutor;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMain;
 import org.ros.node.NodeMainExecutor;
 
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.HashMap;
 
-/**
- * Node management, including node execution, shutdown and node configuration management.
- */
 public class NodeManager {
 
-	// ========== static members ==========
-
-	/**
-	 * Node executor.
-	 */
-	private static final NodeMainExecutor defaultNodeExecutor = DefaultNodeMainExecutor.newDefault();
-
-	/**
-	 * Node configuration
-	 */
 	private static NodeConfiguration nodeConfig = null;
+	private static final NodeMainExecutor nodeExecutor = DefaultNodeMainExecutor.newDefault();
+	private static final HashMap<GraphName, PublisherNode> topicNameToPublisherNode = new HashMap<>();
+	private static final HashMap<GraphName, SubscriberNode> topicNameToSubscriberNode = new HashMap<>();
 
-
-
-	// ========== static methods ==========
-
-	/**
-	 * Create node configuration from configuration file. The configuration will be preserved after
-	 * this method is invoked for the first time.
-	 *
-	 * @return node configuration
-	 */
-	private static NodeConfiguration getNodeConfiguration() {
+	private static NodeConfiguration acquireNodeConfiguration() {
 		if (nodeConfig == null) {
-			try {
-				URI masterURI = new URI(Config.getProperty("masteruri"));
-				String host = Config.getProperty("host");
-				nodeConfig = NodeConfiguration.newPublic(host, masterURI);
-			} catch (URISyntaxException e) {
-				throw new RuntimeException();
-			}
+			String host = Config.getPropertyAsString("host");
+			String masterURI = Config.getPropertyAsString("masterURI");
+			nodeConfig = NodeConfiguration.newPublic(host, URI.create(masterURI));
 		}
 		return nodeConfig;
 	}
 
-	/**
-	 * Execute given node.
-	 *
-	 * @param node node to execute
-	 */
-	public static void executeNode(@NonNull NodeMain node) {
-		defaultNodeExecutor.execute(node, getNodeConfiguration());
+	public static <T extends Message> PublisherNodeHandler<T> acquirePublisherNodeHandler(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+		synchronized (topicNameToPublisherNode) {
+			PublisherNode<T> publisherNode = retrievePublisherNodeWithTopicNameAndType(topicName, topicType);
+			return publisherNode.createHandler();
+		}
 	}
 
-	/**
-	 * Shutdown given node.
-	 *
-	 * @param node node to shutdown
-	 */
-	public static void shutdownNode(@NonNull NodeMain node) {
-		defaultNodeExecutor.shutdownNodeMain(node);
+	public static <T extends Message> SubscriberNodeHandler<T> acquireSubscriberNodeHandler(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+		synchronized (topicNameToSubscriberNode) {
+			SubscriberNode<T> subscriberNode = retrieveSubscriberNodeWithTopicNameAndType(topicName, topicType);
+			return subscriberNode.createHandler();
+		}
 	}
 
-	/**
-	 * Shutdown all nodes and thread pool. This should only be invoked on program termination.
-	 */
-	public static void shutdown() {
-		// TODO: this method should be invoked for a graceful exit
-		defaultNodeExecutor.shutdown(); // shutdown all nodes
-		defaultNodeExecutor.getScheduledExecutorService().shutdown(); // shutdown thread pool
+	@SuppressWarnings("unchecked")
+	private static <T extends Message> PublisherNode<T> retrievePublisherNodeWithTopicNameAndType(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+		// same name and same type: create a new handler and return handler
+		// otherwise: error
+		PublisherNode node = topicNameToPublisherNode.getOrDefault(topicName, null);
+		if (node == null) {
+			// CASE 1: no same name - create
+			PublisherNode<T> newNode = new PublisherNode<>(topicName, topicType);
+			executeNode(newNode);
+			return newNode;
+		}
+		else if (node.getTopicType().equals(topicType)) {
+			// CASE 2: same name and same type - return
+			return node;
+		}
+		else {
+			throw new RuntimeException(
+					String.format(
+							"Type conflict on topic %s: %s - %s",
+							topicName,
+							node.getTopicType(),
+							topicType));
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <T extends Message> SubscriberNode<T> retrieveSubscriberNodeWithTopicNameAndType(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
+		// same name and same type: create a new handler and return handler
+		// otherwise: error
+		SubscriberNode node = topicNameToSubscriberNode.getOrDefault(topicName, null);
+		if (node == null) {
+			// CASE 1: no same name - create
+			SubscriberNode<T> newNode = new SubscriberNode<>(topicName, topicType);
+			executeNode(newNode);
+			return newNode;
+		}
+		else if (node.getTopicType().equals(topicType)) {
+			// CASE 2: same name and same type - return
+			return node;
+		}
+		else {
+			throw new RuntimeException(
+					String.format(
+							"Type conflict on topic %s: %s - %s",
+							topicName,
+							node.getTopicType(),
+							topicType));
+		}
+	}
+
+	private static void executeNode(@NonNull NodeMain node) {
+		nodeExecutor.execute(node, acquireNodeConfiguration());
 	}
 
 }

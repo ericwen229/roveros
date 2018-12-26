@@ -1,5 +1,6 @@
 package com.ericwen229.server;
 
+import com.ericwen229.node.SubscriberNodeHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Image;
 import lombok.NonNull;
@@ -18,47 +19,40 @@ import java.util.logging.Logger;
 
 public class VideoServer extends WebSocketServer {
 
-	private static final Logger logger = Logger.getLogger(VideoServer.class.getName());
-
-	// ========== constructor ==========
-
 	public VideoServer(@NonNull InetSocketAddress address) {
 		super(address);
-		/*TopicManager.subscribeToTopic(
-				GraphName.of("/camera/rgb/image_raw"),
-				sensor_msgs.Image.class,
-				this::imageMessageHandler);*/
+		SubscriberNodeHandler<sensor_msgs.Image> handler =
+				TopicManager.subscribeToTopic(
+						GraphName.of("/camera/rgb/image_raw"),
+						sensor_msgs.Image.class);
+		handler.subscribe(this::imageMessageHandler);
 	}
 
-	// ========== overridden methods ==========
-
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		logger.warning(
+		Logger.getGlobal().warning(
 				String.format("Video server connection established: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-		logger.info(
+		Logger.getGlobal().info(
 				String.format("Video server connection closed: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onMessage(WebSocket webSocket, String s) {
-		logger.warning(
+		Logger.getGlobal().warning(
 				String.format("Unexpected message to video server from: %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	public void onError(WebSocket webSocket, Exception e) {
-		logger.warning(
+		Logger.getGlobal().warning(
 				String.format("Video server exception: %s", e.getClass().getName()));
 		webSocket.close();
 	}
 
 	public void onStart() {
-		logger.info(
+		Logger.getGlobal().info(
 				String.format("Video server URI: %s", getAddress()));
 	}
-
-	// ========== main logic ==========
 
 	public void imageMessageHandler(sensor_msgs.Image imageMsg) {
 		BufferedImage image = Image.imageFromMessage(imageMsg);
@@ -66,8 +60,7 @@ public class VideoServer extends WebSocketServer {
 		try {
 			ImageIO.write(image, "jpeg", outputStream);
 		} catch (IOException e) {
-			// TODO
-			throw new RuntimeException();
+			Logger.getGlobal().severe("Image IO error");
 		}
 		broadcast(Base64.getEncoder().encodeToString(outputStream.toByteArray()));
 	}
