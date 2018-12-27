@@ -23,7 +23,7 @@ public class VideoServer extends WebSocketServer {
 		super(address);
 		SubscriberNodeHandler<sensor_msgs.Image> handler =
 				TopicManager.subscribeToTopic(
-						GraphName.of("/camera/rgb/image_raw"),
+						GraphName.of("/camera/rgb/image_color"),
 						sensor_msgs.Image.class);
 		handler.subscribe(this::imageMessageHandler);
 	}
