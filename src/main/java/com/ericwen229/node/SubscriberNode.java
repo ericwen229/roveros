@@ -14,7 +14,6 @@ import org.ros.node.topic.Subscriber;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.logging.Logger;
 
 class SubscriberNode<T extends Message> implements NodeMain {
 
@@ -36,7 +35,7 @@ class SubscriberNode<T extends Message> implements NodeMain {
 
 	@Override
 	public void onStart(ConnectedNode connectedNode) {
-		Logger.getGlobal().info(
+		connectedNode.getLog().info(
 				String.format(
 						"Subscriber node %s at %s starting",
 						getDefaultNodeName(),
@@ -47,7 +46,7 @@ class SubscriberNode<T extends Message> implements NodeMain {
 
 	@Override
 	public void onShutdown(Node node) {
-		Logger.getGlobal().info(
+		node.getLog().info(
 				String.format(
 						"Subscriber node %s at %s shutting down",
 						getDefaultNodeName(),
@@ -55,16 +54,23 @@ class SubscriberNode<T extends Message> implements NodeMain {
 	}
 
 	@Override
-	public void onShutdownComplete(Node node) {}
+	public void onShutdownComplete(Node node) {
+		node.getLog().info(
+				String.format(
+						"Subscriber node %s at %s shut down complete",
+						getDefaultNodeName(),
+						node.getUri()));
+	}
 
 	@Override
 	public void onError(Node node, Throwable throwable) {
-		Logger.getGlobal().severe(
+		node.getLog().fatal(
 				String.format(
 						"Subscriber node %s at %s error: %s",
 						getDefaultNodeName(),
 						node.getUri(),
 						throwable));
+		System.exit(-1);
 	}
 
 	SubscriberNodeHandler<T> createHandler() {

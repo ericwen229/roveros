@@ -37,7 +37,7 @@ class PublisherNode<T extends Message> implements NodeMain {
 	@Override
 	public void onStart(ConnectedNode connectedNode) {
 		isPublisherReady = false;
-		Logger.getGlobal().info(
+		connectedNode.getLog().info(
 				String.format(
 						"Publisher node %s at %s starting",
 						getDefaultNodeName(),
@@ -62,7 +62,7 @@ class PublisherNode<T extends Message> implements NodeMain {
 	@Override
 	public void onShutdown(Node node) {
 		isPublisherReady = false;
-		Logger.getGlobal().info(
+		node.getLog().info(
 				String.format(
 						"Publisher node %s at %s shutting down",
 						getDefaultNodeName(),
@@ -72,17 +72,23 @@ class PublisherNode<T extends Message> implements NodeMain {
 	@Override
 	public void onShutdownComplete(Node node) {
 		isPublisherReady = false;
+		node.getLog().info(
+				String.format(
+						"Publisher node %s at %s shut down complete",
+						getDefaultNodeName(),
+						node.getUri()));
 	}
 
 	@Override
 	public void onError(Node node, Throwable throwable) {
 		isPublisherReady = false;
-		Logger.getGlobal().severe(
+		node.getLog().fatal(
 				String.format(
 						"Publisher node %s at %s error: %s",
 						getDefaultNodeName(),
 						node.getUri(),
 						throwable));
+		System.exit(-1);
 	}
 
 	PublisherNodeHandler<T> createHandler() {
