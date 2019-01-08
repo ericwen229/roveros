@@ -15,7 +15,7 @@ public class Talker {
 		publisherHandler.blockUntilReady();
 
 		std_msgs.String msg = publisherHandler.newMessage();
-		for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 10; i++) {
 			msg.setData(Integer.toString(i));
 			publisherHandler.publish(msg);
 			System.out.println(String.format("published %s", msg.getData()));
@@ -25,6 +25,8 @@ public class Talker {
 			}
 			catch (InterruptedException e) {}
 		}
+
+		publisherHandler.close();
 
 		System.exit(0);
 	}

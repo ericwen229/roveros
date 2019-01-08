@@ -13,16 +13,14 @@ import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 import org.ros.node.topic.PublisherListener;
 
-import java.util.logging.Logger;
-
 class PublisherNode<T extends Message> implements NodeMain {
 
 	@Getter private final GraphName topicName;
 	@Getter private final Class<T> topicType;
 	private Publisher<T> publisher;
-
 	private volatile boolean isPublisherReady = false;
-	private Object publisherReadyNotifier = new Object();
+	private final Object publisherReadyNotifier = new Object();
+	private int handlerCount = 0;
 
 	PublisherNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		this.topicName = topicName;
@@ -92,7 +90,15 @@ class PublisherNode<T extends Message> implements NodeMain {
 	}
 
 	PublisherNodeHandler<T> createHandler() {
+		handlerCount ++;
 		return new PublisherNodeHandler<>(this);
+	}
+
+	void returnHandler() {
+		handlerCount --;
+		if (handlerCount == 0) {
+			NodeManager.shutdownPublisherNode(this);
+		}
 	}
 
 	boolean isReady() {

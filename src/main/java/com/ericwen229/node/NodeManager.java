@@ -44,56 +44,66 @@ public class NodeManager {
 
 	@SuppressWarnings("unchecked")
 	private static <T extends Message> PublisherNode<T> retrievePublisherNodeWithTopicNameAndType(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
-		// same name and same type: create a new handler and return handler
-		// otherwise: error
-		PublisherNode node = topicNameToPublisherNode.getOrDefault(topicName, null);
-		if (node == null) {
-			// CASE 1: no same name - create
-			PublisherNode<T> newNode = new PublisherNode<>(topicName, topicType);
-			executeNode(newNode);
-			return newNode;
-		}
-		else if (node.getTopicType().equals(topicType)) {
-			// CASE 2: same name and same type - return
-			return node;
-		}
-		else {
-			throw new RuntimeException(
-					String.format(
-							"Type conflict on topic %s: %s - %s",
-							topicName,
-							node.getTopicType(),
-							topicType));
+		synchronized (topicNameToPublisherNode) {
+			// same name and same type: create a new handler and return handler
+			// otherwise: error
+			PublisherNode node = topicNameToPublisherNode.getOrDefault(topicName, null);
+			if (node == null) {
+				// CASE 1: no same name - create
+				PublisherNode<T> newNode = new PublisherNode<>(topicName, topicType);
+				executeNode(newNode);
+				return newNode;
+			} else if (node.getTopicType().equals(topicType)) {
+				// CASE 2: same name and same type - return
+				return node;
+			} else {
+				throw new RuntimeException(
+						String.format(
+								"Type conflict on topic %s: %s - %s",
+								topicName,
+								node.getTopicType(),
+								topicType));
+			}
 		}
 	}
 
 	@SuppressWarnings("unchecked")
 	private static <T extends Message> SubscriberNode<T> retrieveSubscriberNodeWithTopicNameAndType(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
-		// same name and same type: create a new handler and return handler
-		// otherwise: error
-		SubscriberNode node = topicNameToSubscriberNode.getOrDefault(topicName, null);
-		if (node == null) {
-			// CASE 1: no same name - create
-			SubscriberNode<T> newNode = new SubscriberNode<>(topicName, topicType);
-			executeNode(newNode);
-			return newNode;
-		}
-		else if (node.getTopicType().equals(topicType)) {
-			// CASE 2: same name and same type - return
-			return node;
-		}
-		else {
-			throw new RuntimeException(
-					String.format(
-							"Type conflict on topic %s: %s - %s",
-							topicName,
-							node.getTopicType(),
-							topicType));
+		synchronized (topicNameToSubscriberNode) {
+			// same name and same type: create a new handler and return handler
+			// otherwise: error
+			SubscriberNode node = topicNameToSubscriberNode.getOrDefault(topicName, null);
+			if (node == null) {
+				// CASE 1: no same name - create
+				SubscriberNode<T> newNode = new SubscriberNode<>(topicName, topicType);
+				executeNode(newNode);
+				return newNode;
+			} else if (node.getTopicType().equals(topicType)) {
+				// CASE 2: same name and same type - return
+				return node;
+			} else {
+				throw new RuntimeException(
+						String.format(
+								"Type conflict on topic %s: %s - %s",
+								topicName,
+								node.getTopicType(),
+								topicType));
+			}
 		}
 	}
 
 	private static void executeNode(@NonNull NodeMain node) {
 		nodeExecutor.execute(node, acquireNodeConfiguration());
+	}
+
+	static void shutdownPublisherNode(@NonNull PublisherNode<? extends Message> node) {
+		topicNameToPublisherNode.remove(node.getTopicName());
+		nodeExecutor.shutdownNodeMain(node);
+	}
+
+	static void shutdownSubscriberNode(@NonNull SubscriberNode<? extends Message> node) {
+		topicNameToSubscriberNode.remove(node.getTopicName());
+		nodeExecutor.shutdownNodeMain(node);
 	}
 
 }

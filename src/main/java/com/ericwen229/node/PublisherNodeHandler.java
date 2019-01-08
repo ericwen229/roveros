@@ -6,25 +6,41 @@ import org.ros.internal.message.Message;
 public class PublisherNodeHandler<T extends Message> {
 
 	private final PublisherNode<T> publisherNode;
+	private boolean isHandlerClosed = false;
 
 	PublisherNodeHandler(@NonNull PublisherNode<T> publisherNode) {
 		this.publisherNode = publisherNode;
 	}
 
 	public boolean isReady() {
+		if (isHandlerClosed)
+			throw new RuntimeException("Publisher handler has been closed");
 		return publisherNode.isReady();
 	}
 
-	public T newMessage() {
+	synchronized public T newMessage() {
+		if (isHandlerClosed)
+			throw new RuntimeException("Publisher handler has been closed");
 		return publisherNode.newMessage();
 	}
 
-	public void publish(@NonNull T message) {
+	synchronized public void publish(@NonNull T message) {
+		if (isHandlerClosed)
+			throw new RuntimeException("Publisher handler has been closed");
 		publisherNode.publish(message);
 	}
 
-	public void blockUntilReady() {
+	synchronized public void blockUntilReady() {
+		if (isHandlerClosed)
+			throw new RuntimeException("Publisher handler has been closed");
 		publisherNode.blockUntilReady();
+	}
+
+	synchronized public void close() {
+		if (isHandlerClosed)
+			throw new RuntimeException("Publisher handler has been closed");
+		isHandlerClosed = true;
+		publisherNode.returnHandler();
 	}
 
 }

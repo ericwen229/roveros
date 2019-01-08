@@ -19,8 +19,8 @@ class SubscriberNode<T extends Message> implements NodeMain {
 
 	@Getter private final GraphName topicName;
 	@Getter private final Class<T> topicType;
-
 	private final Set<Consumer<T>> consumers;
+	private int handlerCount = 0;
 
 	SubscriberNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		this.topicName = topicName;
@@ -74,7 +74,15 @@ class SubscriberNode<T extends Message> implements NodeMain {
 	}
 
 	SubscriberNodeHandler<T> createHandler() {
+		handlerCount ++;
 		return new SubscriberNodeHandler<>(this);
+	}
+
+	void returnHandler() {
+		handlerCount --;
+		if (handlerCount == 0) {
+			NodeManager.shutdownSubscriberNode(this);
+		}
 	}
 
 	private void accept(@NonNull T message) {
