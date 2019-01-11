@@ -9,8 +9,6 @@ import java.awt.image.BufferedImage;
  */
 public class Image {
 
-	// ========== static methods ==========
-
 	/**
 	 * Created image from ROS image message.
 	 *

@@ -8,10 +8,21 @@ import java.io.IOException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+/**
+ * This class manages application configurations.
+ */
 public class Config {
 
+	/**
+	 * Properties shared within the application.
+	 */
 	private static Properties properties = null;
 
+	/**
+	 * Load configuration from given path.
+	 *
+	 * @param filePath path of configuration file
+	 */
 	public static void loadConfig(@NonNull String filePath) {
 		Logger.getGlobal().info(String.format("Config file path: %s", filePath));
 		try (FileInputStream fStream = new FileInputStream(filePath)) {
@@ -28,6 +39,12 @@ public class Config {
 		}
 	}
 
+	/**
+	 * Get property associated with given key.
+	 *
+	 * @param key key with which property required is associated
+	 * @return property associated with given key
+	 */
 	public static String getProperty(String key) {
 		String result = properties.getProperty(key);
 		if (result == null)
@@ -36,16 +53,24 @@ public class Config {
 		return result;
 	}
 
+	/**
+	 * An alias of {@link #getProperty(String)}
+	 *
+	 * @param key key with which property required is associated
+	 * @return property associated with given key
+	 */
 	public static String getPropertyAsString(String key) {
 		return getProperty(key);
 	}
 
+	/**
+	 * Get property associated with given key and try converting it to integer.
+	 *
+	 * @param key key with which property required is associated
+	 * @return property associated with given key
+	 */
 	public static int getPropertyAsInt(String key) {
 		return Integer.parseInt(getProperty(key));
-	}
-
-	public static double getPropertyAsDouble(String key) {
-		return Double.parseDouble(getProperty(key));
 	}
 
 }

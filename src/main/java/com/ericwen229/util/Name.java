@@ -4,7 +4,7 @@ import lombok.NonNull;
 import org.ros.namespace.GraphName;
 
 /**
- * Utils to generate node names.
+ * Utils to generate ROS names.
  */
 public class Name {
 

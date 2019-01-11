@@ -11,28 +11,74 @@ import org.ros.node.Node;
 import org.ros.node.NodeMain;
 import org.ros.node.topic.Subscriber;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Consumer;
 
+/**
+ * This class implements ROS nodes that are responsible for subscribing
+ * to topics. Each node is associated with one single topic to which
+ * node is subscribed.
+ *
+ * @param <T> type of topic to which the node is subscribed
+ *
+ * @see NodeManager
+ * @see TopicSubscribeHandler
+ */
 class SubscriberNode<T extends Message> implements NodeMain {
 
+	/**
+	 * Name of topic to which current node is subscribing
+	 */
 	@Getter private final GraphName topicName;
-	@Getter private final Class<T> topicType;
-	private final Set<Consumer<T>> consumers;
-	private int handlerCount = 0;
 
+	/**
+	 * Type of topic to which current node is subscribing
+	 */
+	@Getter private final Class<T> topicType;
+
+	/**
+	 * Active handlers of current node.
+	 */
+	private final Set<TopicSubscribeHandler<T>> handlers;
+
+	// ===========
+	// constructor
+	// ===========
+
+	/**
+	 * Create a subscriber node associated with given topic of given type.
+	 *
+	 * @param topicName name of topic to which the node is subscribing
+	 * @param topicType type of topic to which the node is subscribing
+	 */
 	SubscriberNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
 		this.topicName = topicName;
 		this.topicType = topicType;
-		consumers = new HashSet<>();
+		handlers = Collections.synchronizedSet(new HashSet<>());
 	}
 
+	// ========================
+	// node lifecycle callbacks
+	// ========================
+
+	/**
+	 * Return name of node.
+	 *
+	 * @return name of node
+	 */
 	@Override
 	public GraphName getDefaultNodeName() {
 		return Name.getSubscriberNodeName(topicName);
 	}
 
+	/**
+	 * Invoked when node has successfully contacted master. Subscriber is created
+	 * here.
+	 *
+	 * @param connectedNode node that's successfully contacted master, used
+	 *                      as factory of subscriber
+	 */
 	@Override
 	public void onStart(ConnectedNode connectedNode) {
 		connectedNode.getLog().info(
@@ -44,6 +90,11 @@ class SubscriberNode<T extends Message> implements NodeMain {
 		subscriber.addMessageListener(this::accept);
 	}
 
+	/**
+	 * Invoked when node is shutting down.
+	 *
+	 * @param node node to be shut down
+	 */
 	@Override
 	public void onShutdown(Node node) {
 		node.getLog().info(
@@ -53,6 +104,11 @@ class SubscriberNode<T extends Message> implements NodeMain {
 						node.getUri()));
 	}
 
+	/**
+	 * Invoked when node has been shut down.
+	 *
+	 * @param node node that's been shut down
+	 */
 	@Override
 	public void onShutdownComplete(Node node) {
 		node.getLog().info(
@@ -62,6 +118,13 @@ class SubscriberNode<T extends Message> implements NodeMain {
 						node.getUri()));
 	}
 
+	/**
+	 * Invoked when fatal error occurs. After which {@link #onShutdown(Node)} and
+	 * {@link #onShutdownComplete(Node)} will be invoked.
+	 *
+	 * @param node node that raises an error
+	 * @param throwable cause of error
+	 */
 	@Override
 	public void onError(Node node, Throwable throwable) {
 		node.getLog().fatal(
@@ -73,35 +136,51 @@ class SubscriberNode<T extends Message> implements NodeMain {
 		System.exit(-1);
 	}
 
-	SubscriberNodeHandler<T> createHandler() {
-		handlerCount ++;
-		return new SubscriberNodeHandler<>(this);
+	// ==================
+	// handler management
+	// ==================
+
+	/**
+	 * Create a subscriber node handler to be used by user program.
+	 *
+	 * @return subscriber handler created
+	 */
+	TopicSubscribeHandler<T> createHandler() {
+		TopicSubscribeHandler<T> newHandler = new TopicSubscribeHandler<>(this);
+		handlers.add(newHandler);
+		return newHandler;
 	}
 
-	void returnHandler() {
-		handlerCount --;
-		if (handlerCount == 0) {
-			NodeManager.shutdownSubscriberNode(this);
-		}
+	/**
+	 * Return (give back) a subscriber handler.
+	 *
+	 * @param handler handler to return
+	 */
+	void returnHandler(TopicSubscribeHandler handler) {
+		handlers.remove(handler);
 	}
 
+	/**
+	 * Return number of active handlers.
+	 *
+	 * @return number of active handlers
+	 */
+	int getHandlerCount() {
+		return handlers.size();
+	}
+
+	// =========================
+	// message receival callback
+	// =========================
+
+	/**
+	 * Invoked when there's a new message.
+	 *
+	 * @param message message received
+	 */
 	private void accept(@NonNull T message) {
-		synchronized (consumers) {
-			for (Consumer<T> consumer: consumers) {
-				consumer.accept(message);
-			}
-		}
-	}
-
-	void subscribe(@NonNull Consumer<T> consumer) {
-		synchronized (consumers) {
-			consumers.add(consumer);
-		}
-	}
-
-	void unsubscribe(@NonNull Consumer<T> consumer) {
-		synchronized (consumers) {
-			consumers.remove(consumer);
+		for (TopicSubscribeHandler<T> handler: handlers) {
+			handler.accept(message);
 		}
 	}
 

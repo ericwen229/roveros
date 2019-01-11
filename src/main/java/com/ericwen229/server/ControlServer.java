@@ -1,6 +1,6 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.PublisherNodeHandler;
+import com.ericwen229.node.TopicPublishHandler;
 import com.ericwen229.topic.TopicManager;
 import geometry_msgs.Twist;
 import lombok.NonNull;
@@ -62,7 +62,7 @@ public class ControlServer extends WebSocketServer {
 		private final Thread msgPublishThread;
 
 		private ControlMsgPublisher(final long intervalMillis) {
-			final PublisherNodeHandler<Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
+			final TopicPublishHandler<Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
 			msgPublishThread = new Thread(() -> {
 				handler.blockUntilReady();
 				while (!Thread.currentThread().isInterrupted()) {

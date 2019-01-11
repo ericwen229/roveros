@@ -1,6 +1,6 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.SubscriberNodeHandler;
+import com.ericwen229.node.TopicSubscribeHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Image;
 import lombok.NonNull;
@@ -21,7 +21,7 @@ public class VideoServer extends WebSocketServer {
 
 	public VideoServer(@NonNull InetSocketAddress address) {
 		super(address);
-		SubscriberNodeHandler<sensor_msgs.Image> handler =
+		TopicSubscribeHandler<sensor_msgs.Image> handler =
 				TopicManager.subscribeToTopic(
 						GraphName.of("/camera/rgb/image_color"),
 						sensor_msgs.Image.class);
