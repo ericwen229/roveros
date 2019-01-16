@@ -44,7 +44,8 @@ public class TopicSubscribeHandler<T extends Message> {
 	 * Close handler if handler isn't closed before GC.
 	 */
 	@Override
-	protected void finalize() {
+	protected void finalize() throws Throwable {
+		super.finalize();
 		if (!isHandlerClosed) {
 			close();
 		}
@@ -82,7 +83,7 @@ public class TopicSubscribeHandler<T extends Message> {
 	/**
 	 * Close handler. Handler won't be able to be used after this.
 	 */
-	synchronized public void close() {
+	public void close() {
 		checkHandlerNotClosed();
 		isHandlerClosed = true;
 		NodeManager.returnTopicSubscribeHandler(this);
@@ -93,7 +94,7 @@ public class TopicSubscribeHandler<T extends Message> {
 	 *
 	 * @param message message received
 	 */
-	synchronized void accept(@NonNull T message) {
+	void accept(@NonNull T message) {
 		for (Consumer<T> subscriber: subscribers) {
 			subscriber.accept(message);
 		}

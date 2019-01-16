@@ -1,5 +1,6 @@
 package com.ericwen229.util;
 
+import com.ericwen229.node.NodeManager;
 import lombok.NonNull;
 
 import java.io.FileInputStream;

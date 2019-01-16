@@ -3,6 +3,7 @@ package com.ericwen229.node;
 import com.ericwen229.util.Config;
 import lombok.NonNull;
 import org.ros.internal.message.Message;
+import org.ros.message.Time;
 import org.ros.namespace.GraphName;
 import org.ros.node.DefaultNodeMainExecutor;
 import org.ros.node.NodeConfiguration;
@@ -49,6 +50,10 @@ public class NodeManager {
 	 */
 	private static final HashMap<GraphName, SubscriberNode> topicNameToSubscriberNode = new HashMap<>();
 
+	public static void config(@NonNull String host, @NonNull String masterURI) {
+		nodeConfig = NodeConfiguration.newPublic(host, URI.create(masterURI));
+	}
+
 	/**
 	 * Acquire node configuration shared between all nodes. Create one if not created yet.
 	 * Configuration contains host address and master URI specified by {@link Config}.
@@ -57,9 +62,7 @@ public class NodeManager {
 	 */
 	private static NodeConfiguration acquireNodeConfiguration() {
 		if (nodeConfig == null) {
-			String host = Config.getPropertyAsString("host");
-			String masterURI = Config.getPropertyAsString("masterURI");
-			nodeConfig = NodeConfiguration.newPublic(host, URI.create(masterURI));
+			throw new RuntimeException("Node configuration missing");
 		}
 		return nodeConfig;
 	}
@@ -154,26 +157,24 @@ public class NodeManager {
 	 */
 	@SuppressWarnings("unchecked")
 	private static <T extends Message> PublisherNode<T> acquirePublisherNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
-		synchronized (topicNameToPublisherNode) {
-			// same name and same type: create a new handler and return handler
-			// otherwise: error
-			PublisherNode node = topicNameToPublisherNode.getOrDefault(topicName, null);
-			if (node == null) {
-				// CASE 1: no same name - create
-				PublisherNode<T> newNode = new PublisherNode<>(topicName, topicType);
-				executeNode(newNode);
-				return newNode;
-			} else if (node.getTopicType().equals(topicType)) {
-				// CASE 2: same name and same type - return
-				return node;
-			} else {
-				throw new RuntimeException(
-						String.format(
-								"Type conflict on topic %s: %s - %s",
-								topicName,
-								node.getTopicType(),
-								topicType));
-			}
+		// same name and same type: create a new handler and return handler
+		// otherwise: error
+		PublisherNode node = topicNameToPublisherNode.getOrDefault(topicName, null);
+		if (node == null) {
+			// CASE 1: no same name - create
+			PublisherNode<T> newNode = new PublisherNode<>(topicName, topicType);
+			executeNode(newNode);
+			return newNode;
+		} else if (node.getTopicType().equals(topicType)) {
+			// CASE 2: same name and same type - return
+			return node;
+		} else {
+			throw new RuntimeException(
+					String.format(
+							"Type conflict on topic %s: %s - %s",
+							topicName,
+							node.getTopicType(),
+							topicType));
 		}
 	}
 
@@ -191,26 +192,24 @@ public class NodeManager {
 	 */
 	@SuppressWarnings("unchecked")
 	private static <T extends Message> SubscriberNode<T> acquireSubscriberNode(@NonNull GraphName topicName, @NonNull Class<T> topicType) {
-		synchronized (topicNameToSubscriberNode) {
-			// same name and same type: create a new handler and return handler
-			// otherwise: error
-			SubscriberNode node = topicNameToSubscriberNode.getOrDefault(topicName, null);
-			if (node == null) {
-				// CASE 1: no same name - create
-				SubscriberNode<T> newNode = new SubscriberNode<>(topicName, topicType);
-				executeNode(newNode);
-				return newNode;
-			} else if (node.getTopicType().equals(topicType)) {
-				// CASE 2: same name and same type - return
-				return node;
-			} else {
-				throw new RuntimeException(
-						String.format(
-								"Type conflict on topic %s: %s - %s",
-								topicName,
-								node.getTopicType(),
-								topicType));
-			}
+		// same name and same type: create a new handler and return handler
+		// otherwise: error
+		SubscriberNode node = topicNameToSubscriberNode.getOrDefault(topicName, null);
+		if (node == null) {
+			// CASE 1: no same name - create
+			SubscriberNode<T> newNode = new SubscriberNode<>(topicName, topicType);
+			executeNode(newNode);
+			return newNode;
+		} else if (node.getTopicType().equals(topicType)) {
+			// CASE 2: same name and same type - return
+			return node;
+		} else {
+			throw new RuntimeException(
+					String.format(
+							"Type conflict on topic %s: %s - %s",
+							topicName,
+							node.getTopicType(),
+							topicType));
 		}
 	}
 
@@ -230,6 +229,10 @@ public class NodeManager {
 	 */
 	private static void shutdownNode(@NonNull NodeMain node) {
 		nodeExecutor.shutdownNodeMain(node);
+	}
+
+	public static Time getCurrentTime() {
+		return acquireNodeConfiguration().getTimeProvider().getCurrentTime();
 	}
 
 }

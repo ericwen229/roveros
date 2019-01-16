@@ -1,8 +1,13 @@
 package com.ericwen229.util;
 
+import lombok.NonNull;
 import org.jboss.netty.buffer.ChannelBuffer;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * Image utilities related to ROS applications.
@@ -15,9 +20,12 @@ public class Image {
 	 * @param imageMsg image message
 	 * @return image object
 	 */
-	public static BufferedImage imageFromMessage(sensor_msgs.Image imageMsg) {
+	public static BufferedImage imageMessageToBufferdImage(@NonNull sensor_msgs.Image imageMsg) {
 		// TODO: handle different encodings
 		String imageEncoding = imageMsg.getEncoding();
+		if (!imageEncoding.equalsIgnoreCase("bgr8")) {
+			throw new RuntimeException("Unsupported encoding: " + imageEncoding);
+		}
 		int imageWidth = imageMsg.getWidth();
 		int imageHeight = imageMsg.getHeight();
 
@@ -37,6 +45,16 @@ public class Image {
 		}
 
 		return outputImage;
+	}
+
+	public static byte[] bufferedImageToByteArray(@NonNull BufferedImage bufferedImage, @NonNull String encoding) {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		try {
+			ImageIO.write(bufferedImage, "jpeg", outputStream);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		return outputStream.toByteArray();
 	}
 
 	/**

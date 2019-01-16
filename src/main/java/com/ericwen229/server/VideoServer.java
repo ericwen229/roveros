@@ -55,7 +55,7 @@ public class VideoServer extends WebSocketServer {
 	}
 
 	public void imageMessageHandler(sensor_msgs.Image imageMsg) {
-		BufferedImage image = Image.imageFromMessage(imageMsg);
+		BufferedImage image = Image.imageMessageToBufferdImage(imageMsg);
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		try {
 			ImageIO.write(image, "jpeg", outputStream);

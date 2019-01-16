@@ -34,7 +34,8 @@ public class TopicPublishHandler<T extends Message> {
 	 * Close handler if handler isn't closed before GC.
 	 */
 	@Override
-	protected void finalize() {
+	protected void finalize() throws Throwable {
+		super.finalize();
 		if (!isHandlerClosed) {
 			close();
 		}
@@ -54,7 +55,7 @@ public class TopicPublishHandler<T extends Message> {
 	 *
 	 * @return true if handler is ready for publishing
 	 */
-	synchronized public boolean isReady() {
+	public boolean isReady() {
 		checkHandlerNotClosed();
 		return publisherNode.isReady();
 	}
@@ -64,7 +65,7 @@ public class TopicPublishHandler<T extends Message> {
 	 *
 	 * @return object newly created
 	 */
-	synchronized public T newMessage() {
+	public T newMessage() {
 		checkHandlerNotClosed();
 		return publisherNode.newMessage();
 	}
@@ -74,7 +75,7 @@ public class TopicPublishHandler<T extends Message> {
 	 *
 	 * @param message message to publish
 	 */
-	synchronized public void publish(@NonNull T message) {
+	public void publish(@NonNull T message) {
 		checkHandlerNotClosed();
 		publisherNode.publish(message);
 	}
@@ -82,7 +83,7 @@ public class TopicPublishHandler<T extends Message> {
 	/**
 	 * Block current thread until handler is ready for publishing.
 	 */
-	synchronized public void blockUntilReady() {
+	public void blockUntilReady() {
 		checkHandlerNotClosed();
 		publisherNode.blockUntilReady();
 	}
@@ -90,7 +91,7 @@ public class TopicPublishHandler<T extends Message> {
 	/**
 	 * Close handler. Handler won't be able to be used handler after this.
 	 */
-	synchronized public void close() {
+	public void close() {
 		checkHandlerNotClosed();
 		isHandlerClosed = true;
 		NodeManager.returnTopicPublishHandler(this);
