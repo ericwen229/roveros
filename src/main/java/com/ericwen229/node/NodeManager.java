@@ -30,6 +30,11 @@ import java.util.HashMap;
 public class NodeManager {
 
 	/**
+	 * Mutex on node configuration.
+	 */
+	private static final Object nodeConfigurationMutex = new Object();
+
+	/**
 	 * Node configuration object shared by nodes. It is created at its first
 	 * use. It contains host address and master URI specified by {@link Config}.
 	 */
@@ -51,7 +56,12 @@ public class NodeManager {
 	private static final HashMap<GraphName, SubscriberNode> topicNameToSubscriberNode = new HashMap<>();
 
 	public static void config(@NonNull String host, @NonNull String masterURI) {
-		nodeConfig = NodeConfiguration.newPublic(host, URI.create(masterURI));
+		synchronized (nodeConfigurationMutex) {
+			if (nodeConfig != null) {
+				throw new RuntimeException("Node configuration already exists");
+			}
+			nodeConfig = NodeConfiguration.newPublic(host, URI.create(masterURI));
+		}
 	}
 
 	/**
@@ -61,10 +71,12 @@ public class NodeManager {
 	 * @return node configuration
 	 */
 	private static NodeConfiguration acquireNodeConfiguration() {
-		if (nodeConfig == null) {
-			throw new RuntimeException("Node configuration missing");
+		synchronized (nodeConfigurationMutex) {
+			if (nodeConfig == null) {
+				throw new RuntimeException("Node configuration missing");
+			}
+			return nodeConfig;
 		}
-		return nodeConfig;
 	}
 
 	/**
@@ -163,6 +175,7 @@ public class NodeManager {
 		if (node == null) {
 			// CASE 1: no same name - create
 			PublisherNode<T> newNode = new PublisherNode<>(topicName, topicType);
+			topicNameToPublisherNode.put(topicName, newNode);
 			executeNode(newNode);
 			return newNode;
 		} else if (node.getTopicType().equals(topicType)) {
@@ -198,6 +211,7 @@ public class NodeManager {
 		if (node == null) {
 			// CASE 1: no same name - create
 			SubscriberNode<T> newNode = new SubscriberNode<>(topicName, topicType);
+			topicNameToSubscriberNode.put(topicName, newNode);
 			executeNode(newNode);
 			return newNode;
 		} else if (node.getTopicType().equals(topicType)) {
@@ -231,6 +245,11 @@ public class NodeManager {
 		nodeExecutor.shutdownNodeMain(node);
 	}
 
+	/**
+	 * Get current ROS time (either system time or simulated time).
+	 *
+	 * @return ROS time
+	 */
 	public static Time getCurrentTime() {
 		return acquireNodeConfiguration().getTimeProvider().getCurrentTime();
 	}
