@@ -1,6 +1,7 @@
 package com.ericwen229;
 
 import com.ericwen229.node.NodeManager;
+import com.ericwen229.server.ControlServer;
 import com.ericwen229.server.NavigationServer;
 import com.ericwen229.util.Config;
 
@@ -21,6 +22,8 @@ public class ApplicationMain {
 
 		NavigationServer navigationServer = new NavigationServer(new InetSocketAddress(Config.getPropertyAsInt("serverport")));
 		navigationServer.start();
+//		ControlServer controlServer = new ControlServer(new InetSocketAddress(Config.getPropertyAsInt("serverport")));
+//		controlServer.start();
 	}
 
 }

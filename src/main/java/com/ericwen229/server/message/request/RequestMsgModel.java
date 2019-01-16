@@ -1,4 +1,4 @@
-package com.ericwen229.server.model;
+package com.ericwen229.server.message.request;
 
 public class RequestMsgModel {
 

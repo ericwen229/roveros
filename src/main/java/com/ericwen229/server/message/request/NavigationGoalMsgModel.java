@@ -1,4 +1,4 @@
-package com.ericwen229.server.model;
+package com.ericwen229.server.message.request;
 
 public class NavigationGoalMsgModel extends RequestMsgModel {
 
@@ -6,5 +6,6 @@ public class NavigationGoalMsgModel extends RequestMsgModel {
 
 	public double x;
 	public double y;
+	public double angle;
 
 }
