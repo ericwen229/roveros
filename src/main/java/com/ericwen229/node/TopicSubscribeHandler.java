@@ -11,6 +11,8 @@ import java.util.function.Consumer;
  * This class implements handlers used by user programs to subscribe
  * to topics.
  *
+ * <p>Notice that this class is not thread safe.
+ *
  * @param <T> type of topic to which node is subscribed
  */
 public class TopicSubscribeHandler<T extends Message> {

@@ -1,15 +1,25 @@
-package com.ericwen229.sample;
+package com.ericwen229.example;
 
+import com.ericwen229.node.NodeManager;
 import com.ericwen229.node.TopicPublishHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Config;
 import org.ros.namespace.GraphName;
 
+/**
+ * An example of implementation of talker on topic of custom type.
+ */
 public class TalkerCustom {
 
+	/**
+	 * Main.
+	 *
+	 * @param args arguments where configuration file path is expected
+	 */
 	public static void main(String[] args) {
-		// load config
+		// config
 		Config.loadConfig(args[0]);
+		NodeManager.config(Config.getPropertyAsString("host"), Config.getPropertyAsString("masterURI"));
 
 		// create handler
 		TopicPublishHandler<CustomMsg> publishHandler =
@@ -29,6 +39,7 @@ public class TalkerCustom {
 			publishHandler.publish(msg);
 			System.out.println(String.format("published %s - %d", msg.getFoo(), msg.getBar()));
 
+			// wait a sec
 			try {
 				Thread.sleep(500);
 			}

@@ -1,21 +1,31 @@
-package com.ericwen229.sample;
+package com.ericwen229.example;
 
+import com.ericwen229.node.NodeManager;
 import com.ericwen229.node.TopicPublishHandler;
 import com.ericwen229.topic.TopicManager;
 import com.ericwen229.util.Config;
 import org.ros.namespace.GraphName;
 
+/**
+ * An example of talker implementation.
+ */
 public class Talker {
 
+	/**
+	 * Main.
+	 *
+	 * @param args arguments where configuration file path is expected
+	 */
 	public static void main(String[] args) {
-		// load config
+		// config
 		Config.loadConfig(args[0]);
+		NodeManager.config(Config.getPropertyAsString("host"), Config.getPropertyAsString("masterURI"));
 
 		// create handler
 		TopicPublishHandler<std_msgs.String> publishHandler =
 				TopicManager.publishOnTopic(GraphName.of("/foo"), std_msgs.String.class);
 
-		// wait until ready
+		// block until ready
 		publishHandler.blockUntilReady();
 
 		// create message
@@ -28,6 +38,7 @@ public class Talker {
 			publishHandler.publish(msg);
 			System.out.println(String.format("published %s", msg.getData()));
 
+			// wait a sec
 			try {
 				Thread.sleep(1000);
 			}

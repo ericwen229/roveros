@@ -7,6 +7,8 @@ import org.ros.internal.message.Message;
  * This class implements handlers used by user programs to create and
  * publish messages.
  *
+ * <p>Notice that this class is not thread safe.
+ *
  * @param <T> type of topic on which node is publishing
  */
 public class TopicPublishHandler<T extends Message> {

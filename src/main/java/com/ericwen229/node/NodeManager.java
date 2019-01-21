@@ -24,6 +24,8 @@ import java.util.HashMap;
  * also be closed when not needed anymore. When the last active handler is
  * returned, the node will automatically be shutdown.
  *
+ * <p>This class is thread safe.
+ *
  * @see TopicPublishHandler
  * @see TopicSubscribeHandler
  */
@@ -55,6 +57,12 @@ public class NodeManager {
 	 */
 	private static final HashMap<GraphName, SubscriberNode> topicNameToSubscriberNode = new HashMap<>();
 
+	/**
+	 * Specify the host address and master URI used by ROS nodes.
+	 *
+	 * @param host host address used by ROS nodes so that other nodes can use it to reach them
+	 * @param masterURI URI of master node
+	 */
 	public static void config(@NonNull String host, @NonNull String masterURI) {
 		synchronized (nodeConfigurationMutex) {
 			if (nodeConfig != null) {

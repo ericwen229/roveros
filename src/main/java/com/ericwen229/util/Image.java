@@ -7,7 +7,6 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.logging.Logger;
 
 /**
  * Image utilities related to ROS applications.
@@ -47,10 +46,17 @@ public class Image {
 		return outputImage;
 	}
 
+	/**
+	 * Encode buffered image to byte array with given encoding.
+	 *
+	 * @param bufferedImage image
+	 * @param encoding encoding
+	 * @return byte array of encoded image
+	 */
 	public static byte[] bufferedImageToByteArray(@NonNull BufferedImage bufferedImage, @NonNull String encoding) {
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 		try {
-			ImageIO.write(bufferedImage, "jpeg", outputStream);
+			ImageIO.write(bufferedImage, encoding, outputStream);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
