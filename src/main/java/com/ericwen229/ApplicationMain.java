@@ -2,6 +2,7 @@ package com.ericwen229;
 
 import com.ericwen229.node.RoverOSNode;
 import com.ericwen229.server.NavigationServer;
+import com.ericwen229.server.VideoServer;
 import com.ericwen229.util.PropertiesChecked;
 import org.ros.namespace.GraphName;
 
@@ -35,6 +36,9 @@ public class ApplicationMain {
 		navigationServer.start();
 
 		// create and start video server
+		int videoServerPort = Integer.parseInt(properties.getPropertyChecked("videoServerPort"));
+		VideoServer videoServer = new VideoServer(node, new InetSocketAddress(videoServerPort));
+		videoServer.start();
 	}
 
 }
