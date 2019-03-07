@@ -1,7 +1,8 @@
 package com.ericwen229.server.message.request;
 
 /**
- * Message model of navigation goal used for message deserialization.
+ * This class describes the model of navigation goal message, which is used
+ * to navigate Turtlebot on the map.
  */
 public class NavigationGoalMsgModel extends RequestMsgModel {
 

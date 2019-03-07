@@ -105,7 +105,7 @@ public class ControlServer extends WebSocketServer {
 	/**
 	 * Analyze control request and set linear and angular speed accordingly.
 	 *
-	 * @param request
+	 * @param request control request
 	 */
 	private void doControl(@NonNull ControlMsgModel request) {
 		msgPublisher.setLinear(request.linear);

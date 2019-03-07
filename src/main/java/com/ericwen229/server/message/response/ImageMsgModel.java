@@ -1,7 +1,8 @@
 package com.ericwen229.server.message.response;
 
 /**
- * Message model of image used for message serialization.
+ * This class describes the model of image message, which is used
+ * to transfer the image captured by the Kinect camera on Turtlebot.
  */
 public class ImageMsgModel {
 

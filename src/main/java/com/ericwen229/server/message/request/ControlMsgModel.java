@@ -1,5 +1,9 @@
 package com.ericwen229.server.message.request;
 
+/**
+ * This class describes the model of control message, which is used to
+ * directly control Turtlebot's movement.
+ */
 public class ControlMsgModel extends RequestMsgModel {
 
     /**
@@ -8,12 +12,12 @@ public class ControlMsgModel extends RequestMsgModel {
     public static final String typeFieldValue = "control";
 
     /**
-     * Linear speed.
+     * Linear speed of Turtlebot.
      */
     public double linear;
 
     /**
-     * Angular speed.
+     * Angular speed of Turtlebot.
      */
     public double angular;
 

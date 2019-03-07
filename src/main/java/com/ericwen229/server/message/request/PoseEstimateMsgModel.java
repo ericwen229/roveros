@@ -1,7 +1,8 @@
 package com.ericwen229.server.message.request;
 
 /**
- * Message model of pose estimate used for message deserialization.
+ * This class describes the model of pose estimate message, which is used to
+ * approximately estimate Turtlebot's pose on the map.
  */
 public class PoseEstimateMsgModel extends RequestMsgModel {
 
