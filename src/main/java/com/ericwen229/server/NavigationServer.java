@@ -194,7 +194,6 @@ public class NavigationServer extends WebSocketServer {
 		 * Default constructor that creates publishers & subscribers.
 		 */
 		private NavigationManager(@NonNull RoverOSNode node) {
-			while (!node.ready()) {}
 			poseEstimatePublisher = node.publishOnTopic(GraphName.of("/initialpose"), PoseWithCovarianceStamped.class);
 			navigationGoalPublisher = node.publishOnTopic(GraphName.of("/move_base_simple/goal"), PoseStamped.class);
 			mapMetaDataSubscriber = node.subscribeToTopic(GraphName.of("/map_metadata"), MapMetaData.class);

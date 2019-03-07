@@ -56,7 +56,6 @@ public class ControlServer extends WebSocketServer {
 	 */
 	public ControlServer(@NonNull RoverOSNode node, @NonNull InetSocketAddress address) {
 		super(address);
-		while (!node.ready()) {}
 		msgPublisher = new ControlMsgPublisher(node, 100);
 	}
 

@@ -29,7 +29,6 @@ public class VideoServer extends WebSocketServer {
 	 */
 	public VideoServer(@NonNull RoverOSNode node, @NonNull InetSocketAddress address) {
 		super(address);
-		while (!node.ready()) {}
 		Subscriber<sensor_msgs.Image> handler =
 				node.subscribeToTopic(
 						GraphName.of("/camera/rgb/image_color"),

@@ -27,11 +27,14 @@ public class ApplicationMain {
 		// create and run ROS node
 		RoverOSNode node = RoverOSNode.newPublicNode(GraphName.of("roveros"), host, masterURI);
 		node.run();
+		while (!node.ready()) {}
 
 		// create and start navigation server
 		int navigationServerPort = Integer.parseInt(properties.getPropertyChecked("navigationServerPort"));
 		NavigationServer navigationServer = new NavigationServer(node, new InetSocketAddress(navigationServerPort));
 		navigationServer.start();
+
+		// create and start video server
 	}
 
 }
