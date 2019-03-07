@@ -1,7 +1,9 @@
 package com.ericwen229.server;
 
 import com.ericwen229.node.RoverOSNode;
+import com.ericwen229.server.message.response.ImageMsgModel;
 import com.ericwen229.util.Image;
+import com.google.gson.Gson;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
@@ -21,6 +23,11 @@ import java.util.logging.Logger;
  * <p>The server broadcasts base64 encoded jpeg images.
  */
 public class VideoServer extends WebSocketServer {
+
+	/**
+	 * Gson object used for message serialize and deserialize.
+	 */
+	private static final Gson gson = new Gson();
 
 	/**
 	 * Construct server with given address.
@@ -75,7 +82,11 @@ public class VideoServer extends WebSocketServer {
 	private void imageMessageHandler(sensor_msgs.Image imageMsg) {
 		BufferedImage image = Image.imageMessageToBufferdImage(imageMsg);
 		byte[] imageBytes = Image.bufferedImageToByteArray(image, "jpeg");
-		broadcast(Base64.getEncoder().encodeToString(imageBytes));
+		String base64EncodedImageStr = Base64.getEncoder().encodeToString(imageBytes);
+
+		ImageMsgModel msg = new ImageMsgModel();
+		msg.base64EncodedImageStr = base64EncodedImageStr;
+		broadcast(gson.toJson(msg));
 	}
 
 }

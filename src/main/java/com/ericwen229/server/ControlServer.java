@@ -2,7 +2,6 @@ package com.ericwen229.server;
 
 import com.ericwen229.node.RoverOSNode;
 import com.ericwen229.server.message.request.ControlMsgModel;
-import com.ericwen229.server.message.request.NavigationGoalMsgModel;
 import com.ericwen229.server.message.request.PoseEstimateMsgModel;
 import com.ericwen229.server.message.request.RequestMsgModel;
 import com.google.gson.Gson;
@@ -42,8 +41,7 @@ public class ControlServer extends WebSocketServer {
 		RuntimeTypeAdapterFactory<RequestMsgModel> requestRuntimeTypeAdapterFactory
 				= RuntimeTypeAdapterFactory
 				.of(RequestMsgModel.class, RequestMsgModel.typeFieldName)
-				.registerSubtype(PoseEstimateMsgModel.class, PoseEstimateMsgModel.typeFieldValue)
-				.registerSubtype(NavigationGoalMsgModel.class, NavigationGoalMsgModel.typeFieldValue);
+				.registerSubtype(PoseEstimateMsgModel.class, ControlMsgModel.typeFieldValue);
 		gson = new GsonBuilder()
 				.registerTypeAdapterFactory(requestRuntimeTypeAdapterFactory)
 				.create();
