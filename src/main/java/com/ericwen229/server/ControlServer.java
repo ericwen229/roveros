@@ -116,7 +116,7 @@ public class ControlServer extends WebSocketServer {
 	 * This class implements publisher that publish control message to Turtlebot control topic
 	 * at a constant rate.
 	 */
-	private static class ControlMsgPublisher {
+	private class ControlMsgPublisher {
 
 		/**
 		 * Linear speed (forward or backward).
@@ -147,16 +147,18 @@ public class ControlServer extends WebSocketServer {
 			final Publisher<Twist> publisher = node.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
 			new Thread(() -> {
 				while (!Thread.currentThread().isInterrupted()) {
-					double linearValue, angularValue;
-					synchronized (this) {
-						linearValue = linear * linearScale;
-						angularValue = angular * angularScale;
-					}
+					if (ControlServer.this.getConnections().size() > 0) {
+						double linearValue, angularValue;
+						synchronized (this) {
+							linearValue = linear * linearScale;
+							angularValue = angular * angularScale;
+						}
 
-					geometry_msgs.Twist msg = publisher.newMessage();
-					msg.getLinear().setX(linearValue);
-					msg.getAngular().setZ(angularValue);
-					publisher.publish(msg);
+						geometry_msgs.Twist msg = publisher.newMessage();
+						msg.getLinear().setX(linearValue);
+						msg.getAngular().setZ(angularValue);
+						publisher.publish(msg);
+					}
 
 					try {
 						Thread.sleep(intervalMillis);
