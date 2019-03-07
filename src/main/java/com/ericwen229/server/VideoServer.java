@@ -1,13 +1,13 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.TopicSubscribeHandler;
-import com.ericwen229.topic.TopicManager;
+import com.ericwen229.node.RoverOSNode;
 import com.ericwen229.util.Image;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.ros.namespace.GraphName;
+import org.ros.node.topic.Subscriber;
 
 import java.awt.image.BufferedImage;
 import java.net.InetSocketAddress;
@@ -27,13 +27,14 @@ public class VideoServer extends WebSocketServer {
 	 *
 	 * @param address address to which server will listen
 	 */
-	public VideoServer(@NonNull InetSocketAddress address) {
+	public VideoServer(@NonNull RoverOSNode node, @NonNull InetSocketAddress address) {
 		super(address);
-		TopicSubscribeHandler<sensor_msgs.Image> handler =
-				TopicManager.subscribeToTopic(
+		while (!node.ready()) {}
+		Subscriber<sensor_msgs.Image> handler =
+				node.subscribeToTopic(
 						GraphName.of("/camera/rgb/image_color"),
 						sensor_msgs.Image.class);
-		handler.subscribe(this::imageMessageHandler);
+		handler.addMessageListener(this::imageMessageHandler);
 	}
 
 	@Override

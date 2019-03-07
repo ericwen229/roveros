@@ -1,59 +1,102 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.TopicPublishHandler;
-import com.ericwen229.topic.TopicManager;
+import com.ericwen229.node.RoverOSNode;
+import com.ericwen229.server.message.request.ControlMsgModel;
+import com.ericwen229.server.message.request.NavigationGoalMsgModel;
+import com.ericwen229.server.message.request.PoseEstimateMsgModel;
+import com.ericwen229.server.message.request.RequestMsgModel;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
 import geometry_msgs.Twist;
 import lombok.NonNull;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.ros.namespace.GraphName;
+import org.ros.node.topic.Publisher;
 
 import java.net.InetSocketAddress;
-import java.util.Scanner;
 import java.util.logging.Logger;
 
 /**
  * This class implements a websocket server used for controlling Turtlebot.
  *
  * <p>Turtlebot control message consists of two parts: linear speed and angular speed.
- * Thus the websocket server simply interprets a request as two numbers indicating
- * the linear speed and angular speed.
  */
 public class ControlServer extends WebSocketServer {
 
 	/**
+	 * Gson object used for message serialize and deserialize.
+	 */
+	private static final Gson gson;
+
+	/**
 	 * Object that fires control messages at a constant rate.
 	 */
-	private final ControlMsgPublisher msgPublisher = new ControlMsgPublisher(100);
+	private final ControlMsgPublisher msgPublisher;
+
+	static {
+		// make gson deserialize request to different types by checking out the specified field.
+		RuntimeTypeAdapterFactory<RequestMsgModel> requestRuntimeTypeAdapterFactory
+				= RuntimeTypeAdapterFactory
+				.of(RequestMsgModel.class, RequestMsgModel.typeFieldName)
+				.registerSubtype(PoseEstimateMsgModel.class, PoseEstimateMsgModel.typeFieldValue)
+				.registerSubtype(NavigationGoalMsgModel.class, NavigationGoalMsgModel.typeFieldValue);
+		gson = new GsonBuilder()
+				.registerTypeAdapterFactory(requestRuntimeTypeAdapterFactory)
+				.create();
+	}
 
 	/**
 	 * Construct server with given address.
 	 *
 	 * @param address address to which server will listen
 	 */
-	public ControlServer(@NonNull InetSocketAddress address) {
+	public ControlServer(@NonNull RoverOSNode node, @NonNull InetSocketAddress address) {
 		super(address);
+		while (!node.ready()) {}
+		msgPublisher = new ControlMsgPublisher(node, 100);
+	}
+
+	@Override
+	public void onStart() {
+		Logger.getGlobal().info(
+				String.format("RoverOS control server starting at %s", getAddress()));
 	}
 
 	@Override
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		Logger.getGlobal().warning(String.format("Control server connection established: %s", webSocket.getRemoteSocketAddress()));
+		Logger.getGlobal().info(
+				String.format("RoverOS control server established connection to %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-		Logger.getGlobal().info(String.format("Control server connection closed: %s", webSocket.getRemoteSocketAddress()));
+		Logger.getGlobal().info(
+				String.format("RoverOS control server closing connection to %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
 	public void onMessage(WebSocket webSocket, String s) {
-		Scanner scanner = new Scanner(s);
-		double linear = scanner.nextDouble();
-		double angular = scanner.nextDouble();
-
-		msgPublisher.setLinear(linear);
-		msgPublisher.setAngular(angular);
+		try {
+			RequestMsgModel request = gson.fromJson(s, RequestMsgModel.class);
+			if (request.getClass().equals(ControlMsgModel.class)) {
+				doControl((ControlMsgModel)request);
+			}
+			else {
+				Logger.getGlobal().warning(
+						String.format(
+								"RoverOS control server unhandled request type: %s. Dropping request %s from %s.",
+								request.getClass(),
+								s,
+								webSocket.getRemoteSocketAddress()));
+			}
+		}
+		catch (JsonSyntaxException e) {
+			Logger.getGlobal().severe(String.format("RoverOS control server invalid json syntax. Dropping Request %s", s));
+		}
 	}
 
 	@Override
@@ -62,9 +105,14 @@ public class ControlServer extends WebSocketServer {
 		webSocket.close();
 	}
 
-	@Override
-	public void onStart() {
-		Logger.getGlobal().info(String.format("Control server URI: %s", getAddress()));
+	/**
+	 * Analyze control request and set linear and angular speed accordingly.
+	 *
+	 * @param request
+	 */
+	private void doControl(@NonNull ControlMsgModel request) {
+		msgPublisher.setLinear(request.linear);
+		msgPublisher.setAngular(request.angular);
 	}
 
 	/**
@@ -76,32 +124,31 @@ public class ControlServer extends WebSocketServer {
 		/**
 		 * Linear speed (forward or backward).
 		 */
-		private volatile double linear = 0.0;
+		private double linear = 0.0;
 
 		/**
 		 * Angular speed (left or right).
 		 */
-		private volatile double angular = 0.0;
+		private double angular = 0.0;
 
 		/**
 		 * Linear speed scale factor. Will be multiplied with linear speed to produce final linear speed.
 		 */
-		private volatile double linearScale = 1.0;
+		private double linearScale = 1.0;
 
 		/**
 		 * Angular speed scale factor. Will be multiplied with angular speed to produce final angular speed.
 		 */
-		private volatile double angularScale = 1.0;
+		private double angularScale = 1.0;
 
 		/**
 		 * Construct publisher firing messages at given rate.
 		 *
 		 * @param intervalMillis interval between two adjacent publishes
 		 */
-		private ControlMsgPublisher(final long intervalMillis) {
-			final TopicPublishHandler<Twist> handler = TopicManager.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
+		private ControlMsgPublisher(@NonNull RoverOSNode node, final long intervalMillis) {
+			final Publisher<Twist> publisher = node.publishOnTopic(GraphName.of("/cmd_vel_mux/input/teleop"), geometry_msgs.Twist.class);
 			new Thread(() -> {
-				handler.blockUntilReady();
 				while (!Thread.currentThread().isInterrupted()) {
 					double linearValue, angularValue;
 					synchronized (this) {
@@ -109,10 +156,10 @@ public class ControlServer extends WebSocketServer {
 						angularValue = angular * angularScale;
 					}
 
-					geometry_msgs.Twist msg = handler.newMessage();
+					geometry_msgs.Twist msg = publisher.newMessage();
 					msg.getLinear().setX(linearValue);
 					msg.getAngular().setZ(angularValue);
-					handler.publish(msg);
+					publisher.publish(msg);
 
 					try {
 						Thread.sleep(intervalMillis);

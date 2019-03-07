@@ -1,14 +1,13 @@
 package com.ericwen229.server;
 
-import com.ericwen229.node.NodeManager;
-import com.ericwen229.node.TopicPublishHandler;
-import com.ericwen229.node.TopicSubscribeHandler;
+import com.ericwen229.node.RoverOSNode;
 import com.ericwen229.server.message.request.NavigationGoalMsgModel;
 import com.ericwen229.server.message.request.PoseEstimateMsgModel;
 import com.ericwen229.server.message.request.RequestMsgModel;
-import com.ericwen229.topic.TopicManager;
+import com.ericwen229.server.message.response.PoseMsgModel;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.typeadapters.RuntimeTypeAdapterFactory;
 import geometry_msgs.Point;
 import geometry_msgs.PoseStamped;
@@ -16,14 +15,15 @@ import geometry_msgs.PoseWithCovarianceStamped;
 import geometry_msgs.Quaternion;
 import lombok.NonNull;
 import nav_msgs.MapMetaData;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.ros.namespace.GraphName;
+import org.ros.node.topic.Publisher;
+import org.ros.node.topic.Subscriber;
 
 import java.net.InetSocketAddress;
+import java.util.logging.Logger;
 
 /**
  * This class implements a websocket server used for navigating Turtlebot.
@@ -45,9 +45,9 @@ public class NavigationServer extends WebSocketServer {
 	private static final Gson gson;
 
 	/**
-	 * Logger.
+	 * ROS node used by RoverOS
 	 */
-	private static final Log logger = LogFactory.getLog(NavigationServer.class);
+	private final RoverOSNode node;
 
 	/**
 	 * This object encapsulates navigation functions.
@@ -55,7 +55,7 @@ public class NavigationServer extends WebSocketServer {
 	private final NavigationManager navigationManager;
 
 	static {
-		// make Gson deserialize to different types by checking out the specified field.
+		// make gson deserialize request to different types by checking out the specified field.
 		RuntimeTypeAdapterFactory<RequestMsgModel> requestRuntimeTypeAdapterFactory
 				= RuntimeTypeAdapterFactory
 				.of(RequestMsgModel.class, RequestMsgModel.typeFieldName)
@@ -67,48 +67,66 @@ public class NavigationServer extends WebSocketServer {
 	}
 
 	/**
-	 * Construct server with given address.
+	 * Create server with given ROS node and address.
 	 *
 	 * @param address address to which server will listen
 	 */
-	public NavigationServer(@NonNull InetSocketAddress address) {
+	public NavigationServer(@NonNull RoverOSNode node, @NonNull InetSocketAddress address) {
 		super(address);
-		navigationManager = new NavigationManager();
+		this.node = node;
+		this.navigationManager = new NavigationManager(node);
+	}
+
+	@Override
+	public void onStart() {
+		Logger.getGlobal().info(
+				String.format("RoverOS navigation server starting at %s", getAddress()));
 	}
 
 	@Override
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		logger.info(String.format("RoverOS server connection established: %s", webSocket.getRemoteSocketAddress()));
+		Logger.getGlobal().info(
+				String.format("RoverOS navigation server established connection to %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
-		logger.info(String.format("RoverOS server connection closed: %s", webSocket.getRemoteSocketAddress()));
+		Logger.getGlobal().info(
+				String.format("RoverOS navigation server closing connection to %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
 	public void onMessage(WebSocket webSocket, String s) {
-		RequestMsgModel request = gson.fromJson(s, RequestMsgModel.class);
-		if (request.getClass().equals(PoseEstimateMsgModel.class)) {
-			navigationManager.doPoseEstimate((PoseEstimateMsgModel)request);
+		try {
+			RequestMsgModel request = gson.fromJson(s, RequestMsgModel.class);
+			if (request.getClass().equals(PoseEstimateMsgModel.class)) {
+				navigationManager.doPoseEstimate((PoseEstimateMsgModel) request);
+			}
+			else if (request.getClass().equals(NavigationGoalMsgModel.class)) {
+				navigationManager.doNavigationGoal((NavigationGoalMsgModel) request);
+			}
+			else {
+				Logger.getGlobal().warning(
+						String.format(
+								"Unhandled request type: %s. Dropping request %s from %s.",
+								request.getClass(),
+								s,
+								webSocket.getRemoteSocketAddress()));
+			}
 		}
-		else if (request.getClass().equals(NavigationGoalMsgModel.class)) {
-			navigationManager.doNavigationGoal((NavigationGoalMsgModel)request);
-		}
-		else {
-			logger.warn(String.format("Unhandled request type %s. Dropping request.",request.getClass().toString()));
+		catch (JsonSyntaxException e) {
+			Logger.getGlobal().severe(String.format("Invalid json syntax. Dropping Request %s", s));
 		}
 	}
 
 	@Override
 	public void onError(WebSocket webSocket, Exception e) {
-		logger.error(String.format("RoverOS server exception: %s", e.getClass().getName()));
+		Logger.getGlobal().severe(
+				String.format(
+						"RoverOS navigation server exception:\n%s\n\nDropping connection to %s",
+						e.getClass(),
+						webSocket.getRemoteSocketAddress()));
 		webSocket.close();
-	}
-
-	@Override
-	public void onStart() {
-		logger.info(String.format("RoverOS server starting: %s", getAddress()));
 	}
 
 	/**
@@ -118,24 +136,24 @@ public class NavigationServer extends WebSocketServer {
 	private class NavigationManager {
 
 		/**
-		 * Publish handler used to publish estimated pose.
+		 * Publisher used to publish estimated pose.
 		 */
-		private final TopicPublishHandler<PoseWithCovarianceStamped> poseEstimatePublishHandler;
+		private final Publisher<PoseWithCovarianceStamped> poseEstimatePublisher;
 
 		/**
-		 * Publish handler used to publish navigation goal.
+		 * Publisher used to publish navigation goal.
 		 */
-		private final TopicPublishHandler<PoseStamped> goalPublishHandler;
+		private final Publisher<PoseStamped> navigationGoalPublisher;
 
 		/**
-		 * Subscribe handler used to retrieve map meta data.
+		 * Subscriber used to retrieve map meta data.
 		 */
-		private final TopicSubscribeHandler<MapMetaData> mapMetaDataSubscribeHandler;
+		private final Subscriber<MapMetaData> mapMetaDataSubscriber;
 
 		/**
-		 * Subscribe handler used to retrieve real time pose.
+		 * Subscriber used to retrieve real time pose.
 		 */
-		private final TopicSubscribeHandler<PoseWithCovarianceStamped> poseSubscribeHandler;
+		private final Subscriber<PoseWithCovarianceStamped> poseSubscriber;
 
 		/**
 		 * Mutex of accessing map meta data.
@@ -145,44 +163,45 @@ public class NavigationServer extends WebSocketServer {
 		/**
 		 * True if map meta data is received.
 		 */
-		private volatile boolean isMapMetaDataLoaded = false;
+		private boolean isMapMetaDataLoaded = false;
 
 		/**
 		 * Width of map.
 		 */
-		private volatile int mapWidth;
+		private int mapWidth;
 
 		/**
 		 * Height of map.
 		 */
-		private volatile int mapHeight;
+		private int mapHeight;
 
 		/**
 		 * Coordinate X of origin of map.
 		 */
-		private volatile double originX;
+		private double originX;
 
 		/**
 		 * Coordinate Y of origin of map.
 		 */
-		private volatile double originY;
+		private double originY;
 
 		/**
 		 * Resolution of map.
 		 */
-		private volatile double resolution;
+		private double resolution;
 
 		/**
-		 * Default constructor that creates publish & subscribe handlers.
+		 * Default constructor that creates publishers & subscribers.
 		 */
-		private NavigationManager() {
-			poseEstimatePublishHandler = TopicManager.publishOnTopic(GraphName.of("/initialpose"), PoseWithCovarianceStamped.class);
-			goalPublishHandler = TopicManager.publishOnTopic(GraphName.of("/move_base_simple/goal"), PoseStamped.class);
-			mapMetaDataSubscribeHandler = TopicManager.subscribeToTopic(GraphName.of("/map_metadata"), MapMetaData.class);
-			poseSubscribeHandler = TopicManager.subscribeToTopic(GraphName.of("/amcl_pose"), PoseWithCovarianceStamped.class);
+		private NavigationManager(@NonNull RoverOSNode node) {
+			while (!node.ready()) {}
+			poseEstimatePublisher = node.publishOnTopic(GraphName.of("/initialpose"), PoseWithCovarianceStamped.class);
+			navigationGoalPublisher = node.publishOnTopic(GraphName.of("/move_base_simple/goal"), PoseStamped.class);
+			mapMetaDataSubscriber = node.subscribeToTopic(GraphName.of("/map_metadata"), MapMetaData.class);
+			poseSubscriber = node.subscribeToTopic(GraphName.of("/amcl_pose"), PoseWithCovarianceStamped.class);
 
-			mapMetaDataSubscribeHandler.subscribe(this::handleMapMetaData);
-			poseSubscribeHandler.subscribe(this::handlePose);
+			mapMetaDataSubscriber.addMessageListener(this::handleMapMetaData);
+			poseSubscriber.addMessageListener(this::handlePose);
 		}
 
 		/**
@@ -191,18 +210,13 @@ public class NavigationServer extends WebSocketServer {
 		 * @param request pose estimate request
 		 */
 		private void doPoseEstimate(@NonNull PoseEstimateMsgModel request) {
-			if (!poseEstimatePublishHandler.isReady()) {
-				logger.warn("Pose estimate publisher not ready. Dropping request.");
-				return;
-			}
-
 			if (!isMapMetaDataLoaded) {
-				logger.warn("Map metadata not ready. Dropping request.");
+				Logger.getGlobal().warning("Map metadata not ready. Dropping request.");
 				return;
 			}
 
-			PoseWithCovarianceStamped msg = poseEstimatePublishHandler.newMessage();
-			msg.getHeader().setStamp(NodeManager.getCurrentTime());
+			PoseWithCovarianceStamped msg = poseEstimatePublisher.newMessage();
+			msg.getHeader().setStamp(node.getCurrentTime());
 			msg.getHeader().setFrameId("map");
 
 			Point position = msg.getPose().getPose().getPosition();
@@ -216,7 +230,7 @@ public class NavigationServer extends WebSocketServer {
 			orientation.setZ(Math.sin(angleRad));
 			orientation.setW(Math.cos(angleRad));
 
-			poseEstimatePublishHandler.publish(msg);
+			poseEstimatePublisher.publish(msg);
 		}
 
 		/**
@@ -225,18 +239,13 @@ public class NavigationServer extends WebSocketServer {
 		 * @param request navigation goal request
 		 */
 		private void doNavigationGoal(@NonNull NavigationGoalMsgModel request) {
-			if (!goalPublishHandler.isReady()) {
-				logger.warn("Goal publisher not ready. Dropping request.");
-				return;
-			}
-
 			if (!isMapMetaDataLoaded) {
-				logger.warn("Map metadata not ready. Dropping request.");
+				Logger.getGlobal().warning("Map metadata not ready. Dropping request.");
 				return;
 			}
 
-			PoseStamped msg = goalPublishHandler.newMessage();
-			msg.getHeader().setStamp(NodeManager.getCurrentTime());
+			PoseStamped msg = navigationGoalPublisher.newMessage();
+			msg.getHeader().setStamp(node.getCurrentTime());
 			msg.getHeader().setFrameId("map");
 
 			Point position = msg.getPose().getPosition();
@@ -250,7 +259,7 @@ public class NavigationServer extends WebSocketServer {
 			orientation.setZ(Math.sin(angleRad));
 			orientation.setW(Math.cos(angleRad));
 
-			goalPublishHandler.publish(msg);
+			navigationGoalPublisher.publish(msg);
 		}
 
 		/**
@@ -266,7 +275,7 @@ public class NavigationServer extends WebSocketServer {
 				originX = message.getOrigin().getPosition().getX();
 				originY = message.getOrigin().getPosition().getY();
 				resolution = message.getResolution();
-				logger.info(
+				Logger.getGlobal().info(
 						String.format(
 								"Map metadata in position: w%d h%d x%f y%f r%f",
 								mapWidth,
@@ -284,9 +293,13 @@ public class NavigationServer extends WebSocketServer {
 		 */
 		private void handlePose(@NonNull PoseWithCovarianceStamped message) {
 			Point position = message.getPose().getPose().getPosition();
+			// TODO: translate orientation quaternion to angle
 			Quaternion orientation = message.getPose().getPose().getOrientation();
 
-			// TODO: broadcast pose to client
+			PoseMsgModel msg = new PoseMsgModel();
+			msg.x = position.getX();
+			msg.y = position.getY();
+			broadcast(gson.toJson(msg));
 		}
 
 	}
