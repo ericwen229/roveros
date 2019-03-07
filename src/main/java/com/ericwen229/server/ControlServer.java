@@ -92,13 +92,20 @@ public class ControlServer extends WebSocketServer {
 			}
 		}
 		catch (JsonSyntaxException e) {
-			Logger.getGlobal().severe(String.format("RoverOS control server invalid json syntax. Dropping Request %s", s));
+			Logger.getGlobal().warning(
+					String.format(
+							"RoverOS control server invalid json syntax. Dropping Request %s from %s",
+							s,
+							webSocket.getRemoteSocketAddress()));
 		}
 	}
 
 	@Override
 	public void onError(WebSocket webSocket, Exception e) {
-		Logger.getGlobal().warning(String.format("Control server exception: %s", e.getClass().getName()));
+		Logger.getGlobal().severe(
+				String.format("RoverOS control server exception: %s", e.getClass().getName()));
+		Logger.getGlobal().warning(
+				String.format("RoverOS control server about to drop connection to %s", webSocket.getRemoteSocketAddress()));
 		webSocket.close();
 	}
 

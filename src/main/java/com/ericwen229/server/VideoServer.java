@@ -44,15 +44,21 @@ public class VideoServer extends WebSocketServer {
 	}
 
 	@Override
+	public void onStart() {
+		Logger.getGlobal().info(
+				String.format("RoverOS video server starting at %s", getAddress()));
+	}
+
+	@Override
 	public void onOpen(WebSocket webSocket, ClientHandshake clientHandshake) {
-		Logger.getGlobal().warning(
-				String.format("Video server connection established: %s", webSocket.getRemoteSocketAddress()));
+		Logger.getGlobal().info(
+				String.format("RoverOS video server established connection to %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
 	public void onClose(WebSocket webSocket, int i, String s, boolean b) {
 		Logger.getGlobal().info(
-				String.format("Video server connection closed: %s", webSocket.getRemoteSocketAddress()));
+				String.format("RoverOS video server closing connection to %s", webSocket.getRemoteSocketAddress()));
 	}
 
 	@Override
@@ -63,15 +69,11 @@ public class VideoServer extends WebSocketServer {
 
 	@Override
 	public void onError(WebSocket webSocket, Exception e) {
+		Logger.getGlobal().severe(
+				String.format("RoverOS control server exception: %s", e.getClass().getName()));
 		Logger.getGlobal().warning(
-				String.format("Video server exception: %s", e.getClass().getName()));
+				String.format("RoverOS control server about to drop connection to %s", webSocket.getRemoteSocketAddress()));
 		webSocket.close();
-	}
-
-	@Override
-	public void onStart() {
-		Logger.getGlobal().info(
-				String.format("Video server URI: %s", getAddress()));
 	}
 
 	/**

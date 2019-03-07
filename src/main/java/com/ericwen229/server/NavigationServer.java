@@ -115,17 +115,20 @@ public class NavigationServer extends WebSocketServer {
 			}
 		}
 		catch (JsonSyntaxException e) {
-			Logger.getGlobal().severe(String.format("Invalid json syntax. Dropping Request %s", s));
+			Logger.getGlobal().warning(
+					String.format(
+							"RoverOS navigation server invalid json syntax. Dropping Request %s from %s",
+							s,
+							webSocket.getRemoteSocketAddress()));
 		}
 	}
 
 	@Override
 	public void onError(WebSocket webSocket, Exception e) {
 		Logger.getGlobal().severe(
-				String.format(
-						"RoverOS navigation server exception:\n%s\n\nDropping connection to %s",
-						e.getClass(),
-						webSocket.getRemoteSocketAddress()));
+				String.format("RoverOS navigation server exception: %s", e.getClass().getName()));
+		Logger.getGlobal().warning(
+				String.format("RoverOS navigation server about to drop connection to %s", webSocket.getRemoteSocketAddress()));
 		webSocket.close();
 	}
 
@@ -210,7 +213,8 @@ public class NavigationServer extends WebSocketServer {
 		 */
 		private void doPoseEstimate(@NonNull PoseEstimateMsgModel request) {
 			if (!isMapMetaDataLoaded) {
-				Logger.getGlobal().warning("Map metadata not ready. Dropping request.");
+				Logger.getGlobal().warning(
+						"RoverOS navigation server map metadata not ready. Dropping request.");
 				return;
 			}
 
@@ -239,7 +243,8 @@ public class NavigationServer extends WebSocketServer {
 		 */
 		private void doNavigationGoal(@NonNull NavigationGoalMsgModel request) {
 			if (!isMapMetaDataLoaded) {
-				Logger.getGlobal().warning("Map metadata not ready. Dropping request.");
+				Logger.getGlobal().warning(
+						"RoverOS navigation server map metadata not ready. Dropping request.");
 				return;
 			}
 
@@ -276,7 +281,7 @@ public class NavigationServer extends WebSocketServer {
 				resolution = message.getResolution();
 				Logger.getGlobal().info(
 						String.format(
-								"Map metadata in position: w%d h%d x%f y%f r%f",
+								"RoverOS navigation server map metadata in position: w%d h%d x%f y%f r%f",
 								mapWidth,
 								mapHeight,
 								originX,
