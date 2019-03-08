@@ -221,4 +221,7 @@ The server starts at `<ip>:videoServerPort`.
 
 ## TODOs
 
-* Configurable topic names
+* Implement a client (like rviz).
+* Add additional functionality like map management, task management, etc.
+* Implement adapter for more robot models.
+* Perfect the protocol and documentation.
