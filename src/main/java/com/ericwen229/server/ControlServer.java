@@ -41,7 +41,7 @@ public class ControlServer extends WebSocketServer {
 		RuntimeTypeAdapterFactory<RequestMsgModel> requestRuntimeTypeAdapterFactory
 				= RuntimeTypeAdapterFactory
 				.of(RequestMsgModel.class, RequestMsgModel.typeFieldName)
-				.registerSubtype(PoseEstimateMsgModel.class, ControlMsgModel.typeFieldValue);
+				.registerSubtype(ControlMsgModel.class, ControlMsgModel.typeFieldValue);
 		gson = new GsonBuilder()
 				.registerTypeAdapterFactory(requestRuntimeTypeAdapterFactory)
 				.create();

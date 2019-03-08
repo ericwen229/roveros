@@ -1,6 +1,7 @@
 package com.ericwen229;
 
 import com.ericwen229.node.RoverOSNode;
+import com.ericwen229.server.ControlServer;
 import com.ericwen229.server.NavigationServer;
 import com.ericwen229.server.VideoServer;
 import com.ericwen229.util.PropertiesChecked;
@@ -39,6 +40,11 @@ public class ApplicationMain {
 		int videoServerPort = Integer.parseInt(properties.getPropertyChecked("videoServerPort"));
 		VideoServer videoServer = new VideoServer(node, new InetSocketAddress(videoServerPort));
 		videoServer.start();
+
+		// create and start control server
+		int controlServerPort = Integer.parseInt(properties.getPropertyChecked("controlServerPort"));
+		ControlServer controlServer = new ControlServer(node, new InetSocketAddress(controlServerPort));
+		controlServer.start();
 	}
 
 }

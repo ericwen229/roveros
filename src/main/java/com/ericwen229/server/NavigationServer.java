@@ -212,10 +212,12 @@ public class NavigationServer extends WebSocketServer {
 		 * @param request pose estimate request
 		 */
 		private void doPoseEstimate(@NonNull PoseEstimateMsgModel request) {
-			if (!isMapMetaDataLoaded) {
-				Logger.getGlobal().warning(
-						"RoverOS navigation server map metadata not ready. Dropping request.");
-				return;
+			synchronized (mapMetaDataMutex) {
+				if (!isMapMetaDataLoaded) {
+					Logger.getGlobal().warning(
+							"RoverOS navigation server map metadata not ready. Dropping request.");
+					return;
+				}
 			}
 
 			PoseWithCovarianceStamped msg = poseEstimatePublisher.newMessage();
@@ -242,10 +244,12 @@ public class NavigationServer extends WebSocketServer {
 		 * @param request navigation goal request
 		 */
 		private void doNavigationGoal(@NonNull NavigationGoalMsgModel request) {
-			if (!isMapMetaDataLoaded) {
-				Logger.getGlobal().warning(
-						"RoverOS navigation server map metadata not ready. Dropping request.");
-				return;
+			synchronized (mapMetaDataMutex) {
+				if (!isMapMetaDataLoaded) {
+					Logger.getGlobal().warning(
+							"RoverOS navigation server map metadata not ready. Dropping request.");
+					return;
+				}
 			}
 
 			PoseStamped msg = navigationGoalPublisher.newMessage();
@@ -296,13 +300,23 @@ public class NavigationServer extends WebSocketServer {
 		 * @param message received pose
 		 */
 		private void handlePose(@NonNull PoseWithCovarianceStamped message) {
+			synchronized (mapMetaDataMutex) {
+				if (!isMapMetaDataLoaded) {
+					Logger.getGlobal().warning(
+							"RoverOS navigation server map metadata not ready. Dropping pose info.");
+					return;
+				}
+			}
+
 			Point position = message.getPose().getPose().getPosition();
 			// TODO: translate orientation quaternion to angle
 			Quaternion orientation = message.getPose().getPose().getOrientation();
 
 			PoseMsgModel msg = new PoseMsgModel();
-			msg.x = position.getX();
-			msg.y = position.getY();
+			synchronized (mapMetaDataMutex) {
+				msg.x = (position.getX() - originX) / (resolution * mapWidth);
+				msg.y = (position.getY() - originY) / (resolution * mapHeight);
+			}
 			broadcast(gson.toJson(msg));
 		}
 
